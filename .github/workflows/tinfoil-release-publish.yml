@@ -1,0 +1,90 @@
+name: Inactive synthetic configuration release
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Explicit publication authorization (source remains hard-disabled)
+        required: true
+        type: boolean
+        default: false
+      expected_public_commit:
+        description: Reviewed exact current public main / immutable lightweight tag SHA
+        required: true
+        type: string
+      expected_private_source:
+        description: Operator-accepted private publication receipt publicSourceSHA
+        required: true
+        type: string
+      expected_image_digest:
+        description: Operator-accepted immutable private image digest (sha256 prefix)
+        required: true
+        type: string
+
+permissions: {}
+concurrency:
+  group: synthetic-public-config-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # Parent must separately admit private publication and review activation.
+    # Removing this literal false is NOT authorized by source preparation.
+    if: >-
+      ${{ false && inputs.publish == true && github.event_name == 'workflow_dispatch' &&
+          github.repository == 'ajbt200128/possums-intake-deploy' &&
+          github.repository_owner == 'ajbt200128' && github.actor == 'ajbt200128' &&
+          github.triggering_actor == 'ajbt200128' && github.ref_type == 'tag' &&
+          startsWith(github.ref, 'refs/tags/v') && github.run_attempt == 1 }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      SYNTHETIC_RELEASE_ENABLED: 'true'
+      RELEASE_PUBLISH: ${{ inputs.publish }}
+      RELEASE_PUBLIC_SHA: ${{ inputs.expected_public_commit }}
+      RELEASE_PRIVATE_SHA: ${{ inputs.expected_private_source }}
+      RELEASE_IMAGE_DIGEST: ${{ inputs.expected_image_digest }}
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout the actual tag commit
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Offline boundary tests
+        run: python3 -m unittest discover -s scripts -p test_synthetic_release.py
+      - name: Public source and typed absence admission
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/synthetic-release.py guard
+      - name: Pinned official measurement image via credential-safe adapter
+        # Source: tinfoilsh/measure-image-action action.yaml v0.13.2
+        # f2ec2fdf4510459730f0a5158c5817f5361e9461. Composite intentionally
+        # not used: it puts GH_TOKEN's value in argv and treats opaque failure
+        # as release absence. Vendor measurement/protocol remains unchanged.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/synthetic-release.py measure
+      - name: Validate actual SDK manifest and hash its original bytes
+        id: manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/synthetic-release.py manifest
+      - name: Attest the actual manifest under the tagged workflow identity
+        uses: actions/attest@7667f588f2f73a90cea6c7ac70e78266c4f76616 # v3.1.0
+        with:
+          subject-name: tinfoil-deployment.json
+          subject-digest: ${{ steps.manifest.outputs.digest }}
+          predicate-type: https://tinfoil.sh/predicate/snp-tdx-multiplatform/v1
+          predicate-path: output/tinfoil-deployment.json
+      - name: Verify supported signed certificate and create one non-latest release
+        # Does not claim this still-running job has successfully completed.
+        # Parent later checks this exact run/attempt, downloads asset hashes,
+        # verifies SDK signature/service, and separately admits one instance.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/synthetic-release.py publish
