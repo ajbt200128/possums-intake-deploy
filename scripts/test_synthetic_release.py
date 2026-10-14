@@ -384,7 +384,7 @@ class Checks(unittest.TestCase):
         self.assertEqual(code, "signature")
         self.assertTrue(kwargs["token"])
         for flag, value in (("--repo", r.REPO), ("--source-ref", "refs/tags/" + TAG),
-                            ("--cert-identity", f"https://github.com/{r.REPO}/.github/workflows/tinfoil-release.yaml@refs/tags/{TAG}"),
+                            ("--cert-identity", f"https://github.com/{r.REPO}/.github/workflows/tinfoil-release.yml@refs/tags/{TAG}"),
                             ("--source-digest", PUBLIC), ("--signer-digest", PUBLIC), ("--predicate-type", r.PREDICATE)):
             self.assertEqual(args[args.index(flag) + 1], value)
         self.assertIn("--deny-self-hosted-runners", args)
@@ -993,7 +993,8 @@ class Checks(unittest.TestCase):
             self.assertNotIn(SECRET, json.dumps(calls))
 
     def test_renamed_workflow_identity_rejects_old_path_without_fallback(self):
-        self.assertEqual(r.WORKFLOW, ".github/workflows/tinfoil-release.yaml")
+        self.assertEqual(r.WORKFLOW, ".github/workflows/tinfoil-release.yml")
+        self.assertFalse((ROOT / ".github/workflows/tinfoil-release.yaml").exists())
         self.assertFalse((ROOT / ".github/workflows/tinfoil-release-publish.yml").exists())
         api = PublicAPI()
         api.values["/actions/runs/123"][1]["path"] = ".github/workflows/tinfoil-release-publish.yml"
