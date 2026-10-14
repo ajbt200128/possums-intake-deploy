@@ -762,7 +762,8 @@ class Checks(unittest.TestCase):
         value = {"tag_name": TAG, "target_commitish": PUBLIC, "draft": False, "prerelease": False,
                  "assets": [{"name": name, "state": "uploaded", "size": len(raw), "digest": "sha256:" + r.sha(raw)} for name, raw in files.items()]}
         r.release_metadata(value, TAG, PUBLIC, files)
-        for key, bad in (("tag_name", "latest"), ("target_commitish", "main"), ("draft", 0), ("prerelease", True), ("assets", [])):
+        r.release_metadata({**value, "target_commitish": "main"}, TAG, PUBLIC, files)
+        for key, bad in (("tag_name", "latest"), ("target_commitish", "other-branch"), ("draft", 0), ("prerelease", True), ("assets", [])):
             changed = copy.deepcopy(value)
             changed[key] = bad
             self.refuses("assets", lambda: r.safe("assets", lambda: r.release_metadata(changed, TAG, PUBLIC, files)))
@@ -999,16 +1000,21 @@ class Checks(unittest.TestCase):
         self.assertIn("expected_private_source", text)
         self.assertIn("expected_image_digest", text)
         self.assertIn("actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8", text)
-        self.assertIn("actions/attest@7667f588f2f73a90cea6c7ac70e78266c4f76616", text)
-        self.assertIn("predicate-path: output/tinfoil-deployment.json", text)
-        self.assertIn("subject-digest: ${{ steps.manifest.outputs.digest }}", text)
-        self.assertIn(r.PREDICATE, text)
+        official = "uses: tinfoilsh/measure-image-action@f2ec2fdf4510459730f0a5158c5817f5361e9461"
+        self.assertEqual(text.count(official), 1)
+        self.assertIn("config-file: ${{ github.workspace }}/tinfoil-config.yml", text)
+        self.assertIn("github-token: ${{ secrets.GITHUB_TOKEN }}", text)
+        self.assertIn("mark-as-latest: 'false'", text)
+        self.assertLess(text.index("python3 scripts/synthetic-release.py guard"), text.index(official))
+        self.assertNotIn("if:", text[text.index("      - name: Official Tinfoil"):])
         for line in text.splitlines():
             if "uses:" in line:
-                self.assertRegex(line, r"uses: actions/(checkout|attest)@[0-9a-f]{40}")
-        for forbidden in ("workflow_run:", "push:", "pull_request:", "schedule:", "docker login", "secrets.", "gh workflow", "measure-image-action@v"):
+                self.assertRegex(line, r"uses: (actions/checkout|tinfoilsh/measure-image-action)@[0-9a-f]{40}")
+        for forbidden in ("workflow_run:", "push:", "pull_request:", "schedule:", "docker login", "gh workflow", "measure-image-action@v",
+                          "python3 scripts/synthetic-release.py measure", "python3 scripts/synthetic-release.py manifest",
+                          "python3 scripts/synthetic-release.py publish", "uses: actions/attest@"):
             self.assertNotIn(forbidden, text)
-        self.assertEqual(text.count("python3 scripts/synthetic-release.py publish"), 1)
+        self.assertEqual(text.count("secrets."), 1)
 
 
 class StuckChild:

@@ -467,7 +467,9 @@ def measure(config, output, name, run=checked_command):
 
 
 def release_metadata(value, tag, commit, files):
-    require(value.get("tag_name") == tag and value.get("target_commitish") == commit
+    # Official action omits --target; GitHub records the default branch name.
+    # Exact source authority remains the immutable tag, run and signed certificate.
+    require(value.get("tag_name") == tag and value.get("target_commitish") in (commit, "main")
             and value.get("draft") is False and value.get("prerelease") is False, "assets")
     assets = value.get("assets", [])
     require(len(assets) == len(files) and {asset.get("name") for asset in assets} == set(files), "assets")
