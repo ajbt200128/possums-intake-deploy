@@ -384,6 +384,7 @@ class Checks(unittest.TestCase):
         self.assertEqual(code, "signature")
         self.assertTrue(kwargs["token"])
         for flag, value in (("--repo", r.REPO), ("--source-ref", "refs/tags/" + TAG),
+                            ("--cert-identity", f"https://github.com/{r.REPO}/.github/workflows/tinfoil-release.yaml@refs/tags/{TAG}"),
                             ("--source-digest", PUBLIC), ("--signer-digest", PUBLIC), ("--predicate-type", r.PREDICATE)):
             self.assertEqual(args[args.index(flag) + 1], value)
         self.assertIn("--deny-self-hosted-runners", args)
@@ -991,8 +992,22 @@ class Checks(unittest.TestCase):
             self.assertFalse(any("login" in args or "retry" in args or "delete" in args for args in calls))
             self.assertNotIn(SECRET, json.dumps(calls))
 
+    def test_renamed_workflow_identity_rejects_old_path_without_fallback(self):
+        self.assertEqual(r.WORKFLOW, ".github/workflows/tinfoil-release.yaml")
+        self.assertFalse((ROOT / ".github/workflows/tinfoil-release-publish.yml").exists())
+        api = PublicAPI()
+        api.values["/actions/runs/123"][1]["path"] = ".github/workflows/tinfoil-release-publish.yml"
+        self.refuses("invocation", lambda: r.public_gate(environment(), event(), receipt(), api))
+        value = manifest(self.config)
+        digest = r.sha(json.dumps(value).encode())
+        checked = verified_statement(value, digest)
+        checked[0]["verificationResult"]["signature"]["certificate"]["subjectAlternativeName"] = (
+            f"https://github.com/{r.REPO}/.github/workflows/tinfoil-release-publish.yml@refs/tags/{TAG}")
+        self.refuses("signature", lambda: r.statement_gate(checked, value, digest, environment()))
+
     def test_workflow_stays_manual_explicit_default_false_and_pinned(self):
         text = (ROOT / r.WORKFLOW).read_text()
+        self.assertIn("name: Tinfoil Release\n", text)
         self.assertIn("${{ inputs.publish == true", text)
         self.assertIn("default: false", text)
         self.assertIn("permissions: {}", text)

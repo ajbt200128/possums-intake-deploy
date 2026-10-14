@@ -1,4 +1,4 @@
-name: Publish synthetic configuration release
+name: Tinfoil Release
 
 on:
   workflow_dispatch:

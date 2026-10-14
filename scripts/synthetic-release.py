@@ -21,7 +21,7 @@ from pathlib import Path
 
 REPO = "ajbt200128/possums-intake-deploy"
 OWNER = "ajbt200128"
-WORKFLOW = ".github/workflows/tinfoil-release-publish.yml"
+WORKFLOW = ".github/workflows/tinfoil-release.yaml"
 IMAGE = "ghcr.io/ajbt200128/possums-intake-synthetic"
 # Deliberate adapter for upstream action.yaml, not an invocation of its composite.
 UPSTREAM = "f2ec2fdf4510459730f0a5158c5817f5361e9461"

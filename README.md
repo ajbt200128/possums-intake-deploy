@@ -34,6 +34,22 @@ Run the offline suite in the pinned application environment:
 
 `nix shell --offline --inputs-from ../possums-intake nixpkgs#python3 --command env PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts -p 'test_*.py'`
 
+## Dashboard workflow naming and sibling comparison
+
+The genuine publisher is now `.github/workflows/tinfoil-release.yaml`, named **Tinfoil Release**, matching the exact missing filename reported by the dashboard. Its guards, inputs, pinned official action and permissions are unchanged. Future run/certificate verification requires this exact new workflow path; there is no old-path fallback. Historical releases through `v0.1.3` retain their original `tinfoil-release-publish.yml` signer identity and must be verified using their immutable historical source. Renaming does not rewrite releases, fix registry authorization, or establish dashboard detection until read back.
+
+The sibling deliberately retains two workflows: `tinfoil-release.yml` dispatches its private image/reproducibility pipeline, and `tinfoil-release-publish.yml` measures/signs/publishes. Intake has no need for that extra dispatcher: the public config repository uses an explicitly reviewed private-image handoff and one manual publisher. Do not copy its automatic main pipeline or private CI assumptions into this public repository.
+
+Other relevant differences are intentional or remain qualification gaps:
+
+- Same official measurement, checkout and attestation pins; intake explicitly declines latest promotion. Intake's serialized manual first-attempt/current-main/owner gates and bounded job are retained.
+- Sibling publication also grants `packages: write` and `actions: read` and fetches full Git history for its private build correlation. Intake does not copy those permissions or claim public CI can inspect private application runs. These CI permissions do not grant Tinfoil runtime access to the private image.
+- Sibling currently selects CVM **0.14.12**; intake retains independently verified **0.14.7**. This rename is not a CVM upgrade or evidence that all newer platform behavior is qualified.
+- Sibling config has gateway-specific egress, attestation socket and executable healthcheck; intake has no inference/telemetry egress, no socket consumer, a different port/command/user/scratch profile, and no explicit container healthcheck. Do not copy gateway health commands or secrets; runtime readiness remains unqualified.
+- Both use CPU2/memory8192, digest-bound images, read-only roots, tmpfs and runtime secret names. Application image, secret names, network needs and accounting/storage boundaries are separate.
+
+The dashboard subsequently reported a private-image authorization refusal for `v0.1.3`; ledger startup was not established. Correct registry access through private setup and obtain explicit authorization before another deployment. No release dispatch, registry mutation, restart, deploy or additional resource is part of this naming change.
+
 ## CVM syntax correction and existing-instance deployment
 
 The sibling Possums configuration uses a plain version in `cvm-version`. Intake's digest-qualified `0.14.7@sha256:…` measured successfully but the legacy deployment path used it literally in a raw-image filename and returned HTTP 404. The correction retains version **0.14.7**, changing only to `cvm-version: 0.14.7`; image, CPU/memory/GPU, secrets, scratch, egress and telemetry settings are unchanged. Negative tests reject the former digest-qualified value and unsupported versions.
