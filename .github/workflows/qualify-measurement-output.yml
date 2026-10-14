@@ -1,0 +1,46 @@
+# Qualification only: no measurement, signing, release, private pull or deployment.
+name: Qualify vendor measurement output permissions
+on:
+  workflow_dispatch:
+    inputs:
+      qualify:
+        description: Authorize the synthetic Linux DAC fixture only
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: synthetic-measurement-output-qualification
+  cancel-in-progress: false
+jobs:
+  qualify:
+    if: ${{ inputs.qualify == true && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'ajbt200128/possums-intake-deploy' && github.actor == 'ajbt200128' && github.triggering_actor == 'ajbt200128' && github.run_attempt == 1 }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Offline boundary tests
+        run: python3 -m unittest discover -s scripts -p test_synthetic_release.py
+      - name: Prewarm only the pinned public vendor tool
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, 'scripts')
+          import test_synthetic_release as fixture
+          r = fixture.r
+          try:
+              r.checked_command(['docker', 'pull', r.MEASURER], 'permissions', timeout=300)
+              print('{"stage":"pinned_public_vendor_tool","available":true,"measurement":false}')
+          except r.Stop as error:
+              import json
+              print(json.dumps(r.diagnostic(error)))
+              raise SystemExit(1)
+          PY
+      - name: Reproduce old denial and corrected group-only write
+        run: python3 scripts/test_synthetic_release.py --linux-output-probe

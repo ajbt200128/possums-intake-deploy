@@ -563,6 +563,113 @@ class Checks(unittest.TestCase):
         self.assertIn("--cap-drop=ALL", argv)
         self.assertIn("--security-opt=no-new-privileges", argv)
 
+    def test_measure_group_access_survives_umask_without_world_access(self):
+        for mask in (0o022, 0o077, 0o777):
+            with self.subTest(umask=mask), tempfile.TemporaryDirectory() as directory:
+                # macOS inherits the temporary parent's group, unlike Linux's
+                # ordinary non-setgid mkdir. Model the host-GID runner workspace.
+                os.chown(directory, -1, os.getgid())
+                output = Path(directory) / "output"
+                calls = []
+                def run(args, code, **kwargs):
+                    calls.append((args, code, kwargs))
+                    if args[:2] == ["docker", "run"]:
+                        state = output.stat()
+                        self.assertEqual(state.st_mode & 0o7777, 0o770)
+                        self.assertEqual(state.st_uid, os.getuid())
+                        self.assertEqual(state.st_gid, os.getgid())
+                        self.assertEqual(args[args.index("--group-add") + 1], str(state.st_gid))
+                        self.assertTrue(kwargs["token"])
+                        self.assertEqual(kwargs["timeout"], 900)
+                        (output / "manifest").write_bytes(b"fixture")
+                        # Fake vendor has its own umask, not the host's mask.
+                        (output / "manifest").chmod(0o644)
+                    return b""
+                previous = os.umask(mask)
+                try:
+                    r.measure(Path("config"), output, "synthetic-measure-123-1", run)
+                finally:
+                    os.umask(previous)
+                self.assertEqual([item[0][0] for item in calls], ["docker", "docker", "docker", "sudo"])
+                self.assertEqual((output / "manifest").read_bytes(), b"fixture")
+
+    def test_measure_output_preparation_failure_never_invokes_vendor(self):
+        for method, code in (("mkdir", "measurement"), ("chmod", "permissions")):
+            with self.subTest(method=method), tempfile.TemporaryDirectory() as directory:
+                calls = []
+                def run(args, category, **kwargs):
+                    calls.append(args)
+                    return b""
+                with patch.object(Path, method, side_effect=OSError(SECRET)):
+                    error = self.refuses(code, lambda: r.measure(Path("config"), Path(directory) / "output",
+                                                                 "synthetic-measure-123-1", run))
+                self.assertEqual([args[:2] for args in calls], [["docker", "ps"]])
+                self.assertFalse(error.cleanup_failed)
+                self.assertNotIn(SECRET, repr(vars(error)))
+                output = Path(directory) / "output"
+                self.assertEqual(output.exists(), method == "chmod")
+                if method == "chmod":
+                    self.refuses("measurement", lambda: r.measure(Path("config"), output,
+                                                                   "synthetic-measure-123-1", run))
+                    self.assertEqual([args[:2] for args in calls], [["docker", "ps"]])
+
+    def test_docker_numeric_group_preserves_exact_sandbox_and_default_user(self):
+        with patch.object(r.os, "getgid", return_value=1001):
+            argv = r.docker_args(Path("config.yml"), Path("output"), "synthetic-measure-123-1")
+        self.assertEqual(argv, ["docker", "run", "--rm", "--name", "synthetic-measure-123-1",
+            "--group-add", "1001", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--read-only",
+            "--tmpfs", "/tmp", "--tmpfs", "/cache", "--tmpfs", "/root/.cache",
+            "-v", "config.yml:/config.yml:ro", "-v", "output:/output", "-e", "GH_TOKEN", r.MEASURER])
+
+    def test_manual_linux_probe_is_explicit_local_cached_and_credential_free(self):
+        calls = []
+        def command(args, code, **kwargs):
+            calls.append((args, kwargs))
+            self.assertEqual(args[:3], ["docker", "--host", "unix:///var/run/docker.sock"])
+            self.assertFalse(kwargs.get("token", False))
+            if args[3] == "info":
+                return 0, b'"linux"'
+            if args[3:5] == ["image", "inspect"]:
+                return 0, b'"root"'
+            if args[3] == "ps":
+                return 0, b""
+            self.assertEqual(args[3], "run")
+            self.assertIn("--pull=never", args)
+            self.assertIn("--network=none", args)
+            self.assertIn("--cap-drop=ALL", args)
+            self.assertIn("--read-only", args)
+            self.assertIn("--security-opt=no-new-privileges", args)
+            self.assertEqual(args[args.index("--entrypoint") + 1], "/bin/sh")
+            self.assertNotIn("-e", args)
+            self.assertNotIn("--user", args)
+            self.assertIn(r.MEASURER, args)
+            output = Path(args[args.index("-v") + 1].removesuffix(":/output"))
+            if "--group-add" not in args:
+                self.assertEqual(output.stat().st_mode & 0o777, 0o700)
+                return 23, b""
+            self.assertEqual(output.stat().st_mode & 0o777, 0o770)
+            self.assertEqual(args[args.index("--group-add") + 1], "1001")
+            (output / "marker").write_bytes(b"synthetic")
+            return 0, b""
+        with patch.object(sys, "platform", "linux"), patch.object(os, "getuid", return_value=1001), \
+             patch.object(os, "getgid", return_value=1001), patch.object(r, "command", side_effect=command):
+            result = linux_output_probe()
+        self.assertTrue(result["stage0_denied"] and result["stage1_group_write"])
+        self.assertFalse(result["sdk_measurement"] or result["observed_failure_cause_verified"])
+        self.assertEqual(sum(args[3] == "run" for args, _ in calls), 2)
+
+    def test_manual_linux_probe_refuses_nonlinux_and_missing_cache(self):
+        with patch.object(sys, "platform", "darwin"), patch.object(r, "command", side_effect=AssertionError("no command")):
+            self.refuses("permissions", linux_output_probe)
+        calls = []
+        def command(args, code, **kwargs):
+            calls.append(args)
+            return (0, b'"linux"') if args[3] == "info" else (1, b"")
+        with patch.object(sys, "platform", "linux"), patch.object(os, "getuid", return_value=1001), \
+             patch.object(os, "getgid", return_value=1001), patch.object(r, "command", side_effect=command):
+            self.refuses("permissions", linux_output_probe)
+        self.assertEqual([args[3] for args in calls], ["info", "image"])
+
     def test_measure_claims_name_before_attempt_and_cleans_joined_uncertain_create(self):
         for failure in (r.Stop("measurement"), RuntimeError(SECRET), KeyboardInterrupt(SECRET)):
             calls = []
@@ -1091,5 +1198,70 @@ class PublicationTests(unittest.TestCase):
         self.assertNotIn(SECRET, stream.getvalue())
 
 
+def linux_output_probe():
+    """Explicit manual Linux DAC fixture, never discovery/SDK measurement.
+
+    Requires the already-running local daemon and already-cached pinned image.
+    Reject translated bind ownership; no pull, credentials, network or SDK entrypoint.
+    """
+    r.require(sys.platform == "linux" and os.getuid() != 0 and os.getgid() != 0, "permissions")
+    endpoint = ["docker", "--host", "unix:///var/run/docker.sock"]
+    def run(args, code, **kwargs):
+        return r.checked_command(endpoint + args[1:], code, **kwargs)
+    r.require(run(["docker", "info", "--format", "{{json .OSType}}"], "permissions").strip() == b'"linux"', "permissions")
+    user = r.decode(run(["docker", "image", "inspect", r.MEASURER, "--format", "{{json .Config.User}}"], "permissions"), "permissions")
+    r.require(user in ("", "root", "0", "0:0"), "permissions")
+    # Exit 23 means the fixed write was denied, not a classified SDK failure.
+    shell = ('test "$(id -u)" = 0 && '
+             'test "$(awk \'/^CapEff:/{print $2}\' /proc/self/status)" = 0000000000000000 && '
+             'test "$(stat -c %u /output)" = "$1" && '
+             'test "$(stat -c %g /output)" = "$2" || exit 24; '
+             'if (printf synthetic > /output/marker) 2>/dev/null; then exit 0; else exit 23; fi')
+    with tempfile.TemporaryDirectory() as directory:
+        output = Path(directory) / "output"
+        output.mkdir(mode=0o700)
+        for group, mode, expected in ((False, 0o700, 23), (True, 0o770, 0)):
+            output.chmod(mode)
+            name = "synthetic-measure-" + str(os.getpid()) + "-1"
+            r.require(run(["docker", "ps", "-a", "--filter", "name=^/" + name + "$",
+                           "--format", "{{.Names}}"], "permissions") == b"", "permissions")
+            args = ["run", "--rm", "--pull=never", "--name", name, "--network=none",
+                    "--cap-drop=ALL", "--security-opt=no-new-privileges", "--read-only",
+                    "--tmpfs", "/tmp", "--tmpfs", "/cache", "--tmpfs", "/root/.cache",
+                    "-v", str(output) + ":/output", "--entrypoint", "/bin/sh"]
+            if group:
+                args += ["--group-add", str(os.getgid())]
+            args += [r.MEASURER, "-c", shell, "probe", str(os.getuid()), str(os.getgid())]
+            try:
+                result, _ = r.command(endpoint + args, "permissions", timeout=30)
+            except r.Stop as error:
+                if not error.process_cleanup_failed and error.code != "process_cleanup":
+                    try:
+                        r.cleanup_measurement(name, run)
+                    except r.Stop as cleanup:
+                        error.cleanup_failed = True
+                        error.cleanup_status = cleanup.status
+                        error.process_cleanup_failed |= cleanup.process_cleanup_failed or cleanup.code == "process_cleanup"
+                        if error.process_cleanup_failed:
+                            error.outcome = "unknown"
+                else:
+                    error.cleanup_failed = True
+                raise
+            r.cleanup_measurement(name, run)
+            r.require(result == expected, "permissions")
+            r.require((output / "marker").exists() is group, "permissions")
+            if group:
+                r.require((output / "marker").read_bytes() == b"synthetic", "permissions")
+    return {"offline_fixture": True, "stage0_denied": True, "stage1_group_write": True,
+            "sdk_measurement": False, "observed_failure_cause_verified": False}
+
+
 if __name__ == "__main__":
-    unittest.main()
+    if sys.argv[1:] == ["--linux-output-probe"]:
+        try:
+            print(json.dumps(r.safe("permissions", linux_output_probe)))
+        except r.Stop as error:
+            print(json.dumps(r.diagnostic(error)))
+            sys.exit(1)
+    else:
+        unittest.main()

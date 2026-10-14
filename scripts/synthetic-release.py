@@ -412,7 +412,7 @@ def statement_gate(checked, manifest, digest, env):
 
 
 def docker_args(config, output, name):
-    return ["docker", "run", "--rm", "--name", name, "--cap-drop=ALL",
+    return ["docker", "run", "--rm", "--name", name, "--group-add", str(os.getgid()), "--cap-drop=ALL",
             "--security-opt=no-new-privileges", "--read-only", "--tmpfs", "/tmp",
             "--tmpfs", "/cache", "--tmpfs", "/root/.cache",
             "-v", str(config) + ":/config.yml:ro", "-v", str(output) + ":/output",
@@ -430,7 +430,11 @@ def measure(config, output, name, run=checked_command):
     require(pin(name, r"synthetic-measure-[1-9][0-9]*-1"), "measurement")
     require(not output.exists() and not output.is_symlink(), "measurement")
     require(run(["docker", "ps", "-a", "--filter", "name=^/" + name + "$", "--format", "{{.Names}}"], "measurement") == b"", "measurement")
-    safe("measurement", lambda: output.mkdir(mode=0o700))
+    safe("measurement", lambda: output.mkdir(mode=0o770))
+    # Root without DAC capabilities needs the host group; umask may strip it.
+    # Retain the directory on failure as the per-checkout attempt marker; use
+    # a fresh admitted job rather than clearing it to retry this invocation.
+    safe("permissions", lambda: output.chmod(0o770))
     primary = None
     try:
         run(docker_args(config, output, name), "measurement", token=True, timeout=900)
