@@ -28,7 +28,7 @@ SECRET = "SYNTHETIC_HOSTILE_CREDENTIAL_SENTINEL"
 PUBLIC = "a" * 40
 PRIVATE = "96fc6cae0bc65716bba38b6235c71d2d9f1082f0"
 TAG = "v1.2.3"
-CVM = "0.14.7"
+CVM = "0.14.14"
 
 
 def receipt():
@@ -75,8 +75,12 @@ class PublicAPI:
 
 
 def manifest(config):
-    hashes = {"version": "v0.14.7", "root": "1" * 64, "kernel": "2" * 64,
-              "initrd": "3" * 64, "raw": "4" * 64}
+    # Public release pins, independent of the implementation's expected values.
+    hashes = {"version": "v0.14.14",
+              "root": "41068e0738e14ee74d5b987586bdfc261d7bdd59e156dd6818154fd188b8ee7b",
+              "kernel": "91b9c7979e00d4703cbabf9f6872639d23b1b60df88b971a7d49f11603ba4346",
+              "initrd": "422948208e9d9aeddab46968ec7145eb9f0bf9dc82e9b6d0838cbf06995baada",
+              "raw": "9634e66fe8761d227b2f39164dd13fbe54c3f1337b808287ce4a3477ee6d83a1"}
     return {"snp_measurement": "5" * 96,
             "tdx_measurement": {"rtmr1": "6" * 96, "rtmr2": "7" * 96},
             "firmware": {"sev_snp": {"type": "ovmf", "version": "v0.0.4", "sha256": r.FIRMWARE_HASH}},
@@ -173,13 +177,59 @@ class Checks(unittest.TestCase):
         r.config_gate(self.config, self.template, receipt())
         for bad in (self.template + b"\n", self.template.replace(b"8192", b"4096")):
             self.refuses("config", lambda: r.render(bad, receipt(), CVM))
-        self.assertTrue(self.config.startswith(b"cvm-version: 0.14.7\n"))
-        for bad in ("0.14.7@sha256:" + "c" * 64, "0.14.7@sha256:" + "0" * 64,
-                    "v0.14.7", "0.14.7 ", "0.14.7\n", "0.14.10", SECRET, None):
+        self.assertTrue(self.config.startswith(b"cvm-version: 0.14.14\n"))
+        for bad in ("0.14.14@sha256:" + "c" * 64, "0.14.14@sha256:" + "0" * 64,
+                    "v0.14.14", "0.14.14 ", "0.14.14\n", "0.14.14-rc1", "0.15.0",
+                    "0.15.0@sha256:" + "c" * 64, "0.14.7", "0.14.10",
+                    "tinfoil-inference-v0.14.14.raw", SECRET, None):
             self.refuses("config", lambda: r.render(self.template, receipt(), bad))
-        for bad in (self.config.replace(b"cvm-version: 0.14.7\n", b"cvm-version: 0.14.7@sha256:" + b"c" * 64 + b"\n"),
-                    self.config + b"\n", self.config.replace(b"8192", b"4096"), self.config.replace(b"b" * 64, b"e" * 64)):
+            if isinstance(bad, str):
+                changed = self.config.replace(b"cvm-version: 0.14.14\n", ("cvm-version: " + bad + "\n").encode())
+                self.refuses("config", lambda: r.config_gate(changed, self.template, receipt()))
+        for bad in (self.config + b"\n", self.config.replace(b"8192", b"4096"), self.config.replace(b"b" * 64, b"e" * 64)):
             self.refuses("config", lambda: r.config_gate(bad, self.template, receipt()))
+
+    def test_exact_diagnostic_template_no_added_collection_or_privileges(self):
+        expected = b"""cvm-version: @CVM_PIN@
+cpus: 2
+memory: 8192
+gpus: 0
+shim:
+  upstream-port: 8090
+  paths: ['/*']
+containers:
+  - name: intake-synthetic
+    image: ghcr.io/ajbt200128/possums-intake-synthetic@@IMAGE_DIGEST@
+    command: ['synthetic-serve', '--listen', '0.0.0.0:8090']
+    user: '65532:65532'
+    read_only: true
+    tmpfs:
+      /tmp: 'rw,nosuid,nodev,size=128m,mode=1777'
+    healthcheck:
+      test: ['CMD', '/proc/1/exe', 'synthetic-healthcheck']
+      interval: '10s'
+      timeout: '3s'
+      retries: 1
+      start_period: '5s'
+    env:
+      - OTEL_SDK_DISABLED: 'true'
+      - LEDGER_SYNTHETIC_STARTUP_DIAGNOSTICS: 'true'
+    secrets:
+      - LEDGER_ADMIN_KEY
+      - LEDGER_OPERATOR_EMAIL
+      - LEDGER_OPERATOR_PASSWORD
+"""
+        self.assertEqual(self.template, expected)
+        for old, new in ((b"synthetic-healthcheck", b"synthetic-serve"),
+                         (b"'/proc/1/exe'", b"'/bin/sh'"),
+                         (b"LEDGER_SYNTHETIC_STARTUP_DIAGNOSTICS: 'true'",
+                          b"LEDGER_SYNTHETIC_STARTUP_DIAGNOSTICS: 'false'"),
+                         (b"start_period: '5s'", b"start_period: '120s'"),
+                         (b"OTEL_SDK_DISABLED: 'true'", b"OTEL_SDK_DISABLED: 'false'")):
+            changed = self.template.replace(old, new)
+            self.refuses("config", lambda: r.render(changed, receipt(), CVM))
+            changed_config = self.config.replace(old, new)
+            self.refuses("config", lambda: r.config_gate(changed_config, self.template, receipt()))
 
     def test_template_scope_exactly_three_names_no_volumes(self):
         text = self.config.decode()
@@ -189,7 +239,8 @@ class Checks(unittest.TestCase):
         self.assertIn("rw,nosuid,nodev,size=128m,mode=1777", text)
         self.assertIn("user: '65532:65532'", text)
         self.assertIn("OTEL_SDK_DISABLED: 'true'", text)
-        self.assertEqual([line.strip() for line in text.splitlines() if line.strip().startswith("- LEDGER_")],
+        self.assertIn("LEDGER_SYNTHETIC_STARTUP_DIAGNOSTICS: 'true'", text)
+        self.assertEqual([line.strip() for line in text.split("    secrets:\n", 1)[1].splitlines()],
                          ["- LEDGER_ADMIN_KEY", "- LEDGER_OPERATOR_EMAIL", "- LEDGER_OPERATOR_PASSWORD"])
         for forbidden in ("volumes:", "models:", "debug:", "cvm_admin", "devices:", "attested-keys", "healthPolicy", "ports:"):
             self.assertNotIn(forbidden, text)
@@ -335,6 +386,23 @@ class Checks(unittest.TestCase):
         for shape in (None, SECRET, {**manifest(self.config)["vm_shape"], "volumes": 1}):
             value = manifest(self.config)
             value["vm_shape"] = shape
+            self.refuses("manifest", lambda: r.manifest_gate(json.dumps(value), self.config, receipt()))
+
+    def test_manifest_rejects_every_wrong_verified_hash_and_version(self):
+        for field in ("root", "kernel", "initrd", "raw"):
+            for bad in ("e" * 64, "0" * 64, manifest(self.config)["hashes"][field].upper(),
+                        True, None, SECRET):
+                with self.subTest(field=field, bad_type=type(bad).__name__):
+                    value = manifest(self.config)
+                    value["hashes"][field] = bad
+                    if field == "root" and isinstance(bad, str):
+                        # Even a matching cmdline cannot authorize a different root.
+                        value["cmdline"] = value["cmdline"].replace(manifest(self.config)["hashes"]["root"], bad)
+                    self.refuses("manifest", lambda: r.manifest_gate(json.dumps(value), self.config, receipt()))
+        for bad in ("v0.14.7", "v0.14.14-rc1", "v0.15.0", "0.14.14",
+                    "v0.14.14@sha256:" + "c" * 64):
+            value = manifest(self.config)
+            value["hashes"]["version"] = bad
             self.refuses("manifest", lambda: r.manifest_gate(json.dumps(value), self.config, receipt()))
 
     def test_manifest_hashes_firmware_and_closed_tdx_keys(self):

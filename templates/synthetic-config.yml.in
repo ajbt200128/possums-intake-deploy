@@ -13,8 +13,15 @@ containers:
     read_only: true
     tmpfs:
       /tmp: 'rw,nosuid,nodev,size=128m,mode=1777'
+    healthcheck:
+      test: ['CMD', '/proc/1/exe', 'synthetic-healthcheck']
+      interval: '10s'
+      timeout: '3s'
+      retries: 1
+      start_period: '5s'
     env:
       - OTEL_SDK_DISABLED: 'true'
+      - LEDGER_SYNTHETIC_STARTUP_DIAGNOSTICS: 'true'
     secrets:
       - LEDGER_ADMIN_KEY
       - LEDGER_OPERATOR_EMAIL

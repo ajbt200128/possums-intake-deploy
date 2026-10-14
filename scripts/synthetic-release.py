@@ -27,13 +27,21 @@ IMAGE = "ghcr.io/ajbt200128/possums-intake-synthetic"
 UPSTREAM = "f2ec2fdf4510459730f0a5158c5817f5361e9461"
 MEASURER = "ghcr.io/tinfoilsh/measure-image-action@sha256:3c341179eb0752269beeded9b1fb1f59715ee4c0914517cc1d8e10bac09891ca"
 PREDICATE = "https://tinfoil.sh/predicate/snp-tdx-multiplatform/v1"
-TEMPLATE_HASH = "31394ffe50a08b107d959141c266dd8c324788b618fcaa1d9bcf694345751b58"
+TEMPLATE_HASH = "3ed591c27450d56887aabdb74ae466154c0da12d75b973ac20fd8dadb46b78e5"
 FIRMWARE_HASH = "78c890175928167a1bc095d4bf3bb4ad81de80cd7e4e9e683477fc359119c1c4"
 SHA = r"[0-9a-f]{40}"
 HEX = r"[0-9a-f]{64}"
 DIGEST = "sha256:" + HEX
 TAG = r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
-CVM = r"0\.14\.7"
+CVM = r"0\.14\.14"
+# Exact parent-verified v0.14.14 release manifest; verification scope in README.
+CVM_HASHES = {
+    "version": "v0.14.14",
+    "root": "41068e0738e14ee74d5b987586bdfc261d7bdd59e156dd6818154fd188b8ee7b",
+    "kernel": "91b9c7979e00d4703cbabf9f6872639d23b1b60df88b971a7d49f11603ba4346",
+    "initrd": "422948208e9d9aeddab46968ec7145eb9f0bf9dc82e9b6d0838cbf06995baada",
+    "raw": "9634e66fe8761d227b2f39164dd13fbe54c3f1337b808287ce4a3477ee6d83a1",
+}
 ROOT = Path(__file__).resolve().parent.parent
 PROCESS_JOIN_TIMEOUT = 3  # Necessary cleanup only; never a second execution attempt.
 # Closed, packet-local diagnostics. No upstream exception text is classified.
@@ -168,7 +176,7 @@ def render(template, receipt, cvm):
 
 
 def config_gate(root, template, receipt):
-    match = re.match(rb"cvm-version: (0\.14\.7)\n", root)
+    match = re.match(rb"cvm-version: (0\.14\.14)\n", root)
     require(match is not None, "config")
     require(root == render(template, receipt, match[1].decode()), "config")
 
@@ -368,9 +376,7 @@ def manifest_gate(raw, config, receipt):
         require(shape == {"cpus": 2, "memory_mb": 8192, "gpus": 0, "disks": 3}
                 and all(type(item) is int for item in shape.values()), "manifest")
         hashes = value["hashes"]
-        require(type(hashes) is dict and set(hashes) == {"version", "root", "kernel", "initrd", "raw"}
-                and hashes.get("version") == "v0.14.7"
-                and all(pin(hashes.get(field), HEX) for field in ("root", "kernel", "initrd", "raw")), "manifest")
+        require(type(hashes) is dict and hashes == CVM_HASHES, "manifest")
         # Exact cmdline emitted by pinned vendor orchestrator; no duplicate hash token.
         expected = ("readonly=on pci=realloc,nocrs modprobe.blacklist=nouveau nouveau.modeset=0 "
                     "root=/dev/mapper/root roothash=" + hashes["root"] + " tinfoil-config-hash=" + sha(config))

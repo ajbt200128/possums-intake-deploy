@@ -1,4 +1,4 @@
-cvm-version: 0.14.7
+cvm-version: 0.14.14
 cpus: 2
 memory: 8192
 gpus: 0
@@ -7,14 +7,21 @@ shim:
   paths: ['/*']
 containers:
   - name: intake-synthetic
-    image: ghcr.io/ajbt200128/possums-intake-synthetic@sha256:e37d729571bd8ab82eb715a0e5ff97ab3e5a0d8c76b98c1baa1dfa27fb2d55ca
+    image: ghcr.io/ajbt200128/possums-intake-synthetic@sha256:7f24a65b79d57f62489dfea2293b600a42114918323f512c345a3addc12f1720
     command: ['synthetic-serve', '--listen', '0.0.0.0:8090']
     user: '65532:65532'
     read_only: true
     tmpfs:
       /tmp: 'rw,nosuid,nodev,size=128m,mode=1777'
+    healthcheck:
+      test: ['CMD', '/proc/1/exe', 'synthetic-healthcheck']
+      interval: '10s'
+      timeout: '3s'
+      retries: 1
+      start_period: '5s'
     env:
       - OTEL_SDK_DISABLED: 'true'
+      - LEDGER_SYNTHETIC_STARTUP_DIAGNOSTICS: 'true'
     secrets:
       - LEDGER_ADMIN_KEY
       - LEDGER_OPERATOR_EMAIL
