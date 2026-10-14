@@ -1,14 +1,20 @@
 # Possums intake: disposable synthetic deployment
 
-This public repository is reserved for the measured Tinfoil configuration and release evidence of **one disposable synthetic-only ledger instance**. The application source and container image remain private. Public configuration and release measurements do not make private application code independently inspectable.
+This public repository is reserved for the measured Tinfoil configuration and release evidence of **one disposable synthetic-only ledger instance**. The application source remains private; the operator-authorized synthetic container package is public and its binary is reverse-engineerable. Public configuration and release measurements do not make private application code independently inspectable.
 
 ## Authorized scope
 
 - CPU-only Tinfoil instance: **2 CPUs / 8192 MB**.
 - **No persistent volume**: fresh temporary fake accounting state on each start; restarts lose it.
-- Genuine restricted PocketBase operator dashboard and authenticated custom accounting endpoints.
+- Genuine trusted-native PocketBase operator dashboard and separately authenticated custom accounting endpoints.
 - No gateway integration, real funds, payment data, customer data or live telemetry export.
 - No production activation, automatic updates or inference replay.
+
+## Current trusted-native image handoff
+
+The root receipt/config now pin source `e418b9472af5b664371a9097b1f5aea83197cf1f` and CVM **0.14.14**. Exact-source checks, fresh independent native AMD64 A/B builds and actual A image/startup qualification passed. Downloaded artifact hashes and immutable archive/config/runtime identities were independently checked. A single owner-authenticated digest-preserving copy completed; public package/private-source linkage and exact registry manifest digest passed postcheck. This is native owner delivery evidence, not a claim that the CI publisher's package-association gate passed. Historical releases remain unchanged. A fresh signed release and live acceptance of this image are still pending.
+
+The operator explicitly selected unrestricted stock administration: native financial/identity/schema edits, deletion, backups/restore and manual file-token downloads are permitted. These writes bypass accounting Service safeguards and may corrupt or roll back financial state; they are not funding receipts or a safe restore guarantee. Custom accounting retains its shared key, transaction/idempotency/exact-money rules and SQL constraints. SDK logging remains forcibly zero; stock MFA/OTP remain supported while AuthAlert origin recording/mail is disabled. Browser credentials/preferences/drafts/file-token cache are memory-only. Manual token-bearing downloads and sensitive snapshots have browser/history/operator persistence boundaries; tokens/URLs must never enter diagnostics or telemetry. No gateway privacy, production, persistence or telemetry-export permission changes.
 
 ## Release admission
 
