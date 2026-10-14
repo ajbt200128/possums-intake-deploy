@@ -563,7 +563,7 @@ def write_new(path, data, code):
 
 def main(args):
     if args == ["status"]:
-        return {"source_only": True, "workflow_hard_disabled": True, "private_ci_automatically_verified": False,
+        return {"offline": True, "publication_requires_explicit_authorization": True, "private_ci_automatically_verified": False,
                 "deployment_adapter": False, "runtime_verified": False}
     if len(args) == 3 and args[0] == "render":
         receipt = receipt_gate(read_file(Path(args[1]), "receipt", 4096))

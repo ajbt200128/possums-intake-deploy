@@ -14,13 +14,15 @@ This public repository is reserved for the measured Tinfoil configuration and re
 
 A repository existing is not a deployed service. Before deployment, require exact-current-main successful application checks, independently matching fresh native Linux image builds, actual image qualification, digest-preserving private registry publication, and the public immutable configuration's successful measured and signed release. Keep release automation explicitly gated. Do not deploy a placeholder image digest, an unpublished tag, or an unverified release.
 
-No deployable `tinfoil-config.yml` or release exists yet. Add them only after these gates pass; this README is not deployment evidence.
+`tinfoil-config.yml` now pins the operator-accepted synthetic image and verified public CVM manifest. No measured release or instance exists yet; configuration and this README are not deployment evidence.
 
-## Inactive release preparation
+## Explicit synthetic release authorization
 
-`templates/synthetic-config.yml.in` and `scripts/synthetic-release.py` prepare the supported vendor measurement flow. The dispatch-only workflow is hard-disabled with literal `false`; removing that guard requires separate admission after private image publication. Neither source preparation nor passing offline tests authorizes deployment.
+`templates/synthetic-config.yml.in` and `scripts/synthetic-release.py` prepare the supported vendor measurement flow. The operator authorized synthetic-only activation after the image copy. The dispatch-only workflow still defaults publication authorization to false and requires exact owner, source, immutable tag and first-attempt evidence. Production delivery remains disabled.
 
 The public workflow cannot inspect private application CI. Its committed `accepted-image.json` must be an operator-trusted handoff of the accepted publication receipt's exact three fields: `publicSourceSHA`, `imageDigest`, and `archiveSHA`. Recheck the private source, independent native Linux builds, actual image fixtures and private registry evidence before committing those pins and creating an immutable public tag.
+
+The native Linux A/B jobs and actual image fixtures passed. The private image copy completed, but its workflow's post-copy check failed with an unknown cause. Passive owner-side package reads independently confirmed private visibility, source-repository linkage and the matching tagged manifest identifier. The operator explicitly accepted the published image on that evidence; a raw registry-manifest read and actual runtime pull remain unqualified. No copy was replayed. This scoped trust decision does not qualify runtime identity, transport or durability.
 
 The adapter rejects malformed/non-standard JSON, bounds subprocess output and cleanup, keeps credentials in process environment rather than arguments, and preserves known publication evidence through later failures. Publication is one attempt with passive reconciliation only: no retry, overwrite, delete or rollback. The parent must verify the actual completed signed run and downloaded asset hashes before separately admitting the one instance. Offline fixtures do not qualify vendor measurement, signed releases or runtime behavior.
 

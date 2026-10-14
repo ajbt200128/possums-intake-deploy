@@ -1,10 +1,10 @@
-name: Inactive synthetic configuration release
+name: Publish synthetic configuration release
 
 on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Explicit publication authorization (source remains hard-disabled)
+        description: Explicitly authorize one reviewed synthetic configuration release
         required: true
         type: boolean
         default: false
@@ -28,10 +28,10 @@ concurrency:
 
 jobs:
   publish:
-    # Parent must separately admit private publication and review activation.
-    # Removing this literal false is NOT authorized by source preparation.
+    # Operator admitted this synthetic-only activation after private image copy.
+    # Every invocation still requires exact source/tag/owner and first-attempt gates.
     if: >-
-      ${{ false && inputs.publish == true && github.event_name == 'workflow_dispatch' &&
+      ${{ inputs.publish == true && github.event_name == 'workflow_dispatch' &&
           github.repository == 'ajbt200128/possums-intake-deploy' &&
           github.repository_owner == 'ajbt200128' && github.actor == 'ajbt200128' &&
           github.triggering_actor == 'ajbt200128' && github.ref_type == 'tag' &&

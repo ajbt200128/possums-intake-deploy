@@ -487,6 +487,8 @@ class Checks(unittest.TestCase):
             self.refuses("source", lambda: r.read_file(path.parent, "source"))
 
     def test_real_cli_status_and_render_offline_no_credentials_or_root_writes(self):
+        admission_paths = [ROOT / name for name in ("accepted-image.json", "tinfoil-config.yml")]
+        before = [path.read_bytes() if path.exists() else None for path in admission_paths]
         env = {"PATH": os.environ.get("PATH", ""), "PYTHONDONTWRITEBYTECODE": "1", "GH_TOKEN": SECRET,
                "LEDGER_ADMIN_KEY": SECRET, "UNRELATED_SECRET": SECRET}
         with tempfile.TemporaryDirectory() as directory:
@@ -505,8 +507,7 @@ class Checks(unittest.TestCase):
                 else:
                     self.assertEqual(completed.returncode, 1)
                 self.assertEqual(sorted(path.name for path in Path(directory).iterdir()), ["receipt.json"])
-        self.assertFalse((ROOT / "accepted-image.json").exists())
-        self.assertFalse((ROOT / "tinfoil-config.yml").exists())
+        self.assertEqual([path.read_bytes() if path.exists() else None for path in admission_paths], before)
 
     def test_cli_unexpected_is_phase_specific(self):
         for arg, code in (("guard", "source"), ("measure", "measurement"), ("manifest", "manifest"),
@@ -796,7 +797,7 @@ class Checks(unittest.TestCase):
              patch.object(r, "public_get", side_effect=AssertionError("no network")), \
              patch.object(r, "measure", side_effect=AssertionError("no measurement")), \
              patch.object(r, "Live", side_effect=AssertionError("no live context")):
-            self.assertTrue(r.main(["status"])["source_only"])
+            self.assertTrue(r.main(["status"])["offline"])
 
     def test_http_cleanup_preserves_observed_status_not_absence(self):
         error = urllib.error.HTTPError("https://invalid.invalid", 404, SECRET, {}, io.BytesIO(b""))
@@ -879,9 +880,9 @@ class Checks(unittest.TestCase):
             self.assertFalse(any("login" in args or "retry" in args or "delete" in args for args in calls))
             self.assertNotIn(SECRET, json.dumps(calls))
 
-    def test_workflow_stays_manual_literal_false_default_false_and_pinned(self):
+    def test_workflow_stays_manual_explicit_default_false_and_pinned(self):
         text = (ROOT / r.WORKFLOW).read_text()
-        self.assertIn("${{ false && inputs.publish == true", text)
+        self.assertIn("${{ inputs.publish == true", text)
         self.assertIn("default: false", text)
         self.assertIn("permissions: {}", text)
         self.assertIn("cancel-in-progress: false", text)
