@@ -28,7 +28,7 @@ SECRET = "SYNTHETIC_HOSTILE_CREDENTIAL_SENTINEL"
 PUBLIC = "a" * 40
 PRIVATE = "96fc6cae0bc65716bba38b6235c71d2d9f1082f0"
 TAG = "v1.2.3"
-CVM = "0.14.7@sha256:" + "c" * 64
+CVM = "0.14.7"
 
 
 def receipt():
@@ -173,9 +173,12 @@ class Checks(unittest.TestCase):
         r.config_gate(self.config, self.template, receipt())
         for bad in (self.template + b"\n", self.template.replace(b"8192", b"4096")):
             self.refuses("config", lambda: r.render(bad, receipt(), CVM))
-        for bad in ("0.14.7@sha256:" + "0" * 64, CVM.replace("0.14.7", "0.14.10"), SECRET, None):
+        self.assertTrue(self.config.startswith(b"cvm-version: 0.14.7\n"))
+        for bad in ("0.14.7@sha256:" + "c" * 64, "0.14.7@sha256:" + "0" * 64,
+                    "v0.14.7", "0.14.7 ", "0.14.7\n", "0.14.10", SECRET, None):
             self.refuses("config", lambda: r.render(self.template, receipt(), bad))
-        for bad in (self.config + b"\n", self.config.replace(b"8192", b"4096"), self.config.replace(b"b" * 64, b"e" * 64)):
+        for bad in (self.config.replace(b"cvm-version: 0.14.7\n", b"cvm-version: 0.14.7@sha256:" + b"c" * 64 + b"\n"),
+                    self.config + b"\n", self.config.replace(b"8192", b"4096"), self.config.replace(b"b" * 64, b"e" * 64)):
             self.refuses("config", lambda: r.config_gate(bad, self.template, receipt()))
 
     def test_template_scope_exactly_three_names_no_volumes(self):

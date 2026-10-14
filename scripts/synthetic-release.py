@@ -33,7 +33,7 @@ SHA = r"[0-9a-f]{40}"
 HEX = r"[0-9a-f]{64}"
 DIGEST = "sha256:" + HEX
 TAG = r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
-CVM = r"0\.14\.7@sha256:" + HEX
+CVM = r"0\.14\.7"
 ROOT = Path(__file__).resolve().parent.parent
 PROCESS_JOIN_TIMEOUT = 3  # Necessary cleanup only; never a second execution attempt.
 # Closed, packet-local diagnostics. No upstream exception text is classified.
@@ -161,15 +161,14 @@ def receipt_gate(raw):
 
 def render(template, receipt, cvm):
     # Hash-fixed bytes avoid a second YAML parser/schema or arbitrary env fields.
-    require(sha(template) == TEMPLATE_HASH and pin(cvm, CVM)
-            and cvm != "0.14.7@sha256:" + "0" * 64, "config")
+    require(sha(template) == TEMPLATE_HASH and pin(cvm, CVM), "config")
     receipt = receipt_gate(json.dumps(receipt).encode())
     require(template.count(b"@CVM_PIN@") == template.count(b"@IMAGE_DIGEST@") == 1, "config")
     return template.replace(b"@CVM_PIN@", cvm.encode()).replace(b"@IMAGE_DIGEST@", receipt["imageDigest"].encode())
 
 
 def config_gate(root, template, receipt):
-    match = re.match(rb"cvm-version: (0\.14\.7@sha256:[0-9a-f]{64})\n", root)
+    match = re.match(rb"cvm-version: (0\.14\.7)\n", root)
     require(match is not None, "config")
     require(root == render(template, receipt, match[1].decode()), "config")
 
