@@ -43,13 +43,15 @@ def environment():
             "GITHUB_RUN_ATTEMPT": "1", "GITHUB_REF_NAME": TAG,
             "GITHUB_REF": "refs/tags/" + TAG, "GITHUB_SHA": PUBLIC,
             "RELEASE_PUBLIC_SHA": PUBLIC, "RELEASE_PRIVATE_SHA": PRIVATE,
-            "RELEASE_IMAGE_DIGEST": receipt()["imageDigest"], "GITHUB_RUN_ID": "123"}
+            "RELEASE_IMAGE_DIGEST": receipt()["imageDigest"], "GITHUB_RUN_ID": "123",
+            "RELEASE_STORAGE_PHASE": "disposable"}
 
 
 def event():
     return {"ref": TAG, "repository": {"full_name": r.REPO}, "sender": {"login": r.OWNER},
             "inputs": {"publish": "true", "expected_public_commit": PUBLIC,
-                       "expected_private_source": PRIVATE, "expected_image_digest": receipt()["imageDigest"]}}
+                       "expected_private_source": PRIVATE, "expected_image_digest": receipt()["imageDigest"],
+                       "expected_storage_phase": "disposable"}}
 
 
 class PublicAPI:
@@ -332,7 +334,9 @@ containers:
         self.assertEqual(error.status, 404)
 
     def test_committed_bytes_sha_and_file_modes_without_git_mutations(self):
-        names = ("accepted-image.json", "tinfoil-config.yml", "templates/synthetic-config.yml.in", "scripts/synthetic-release.py", "scripts/test_synthetic_release.py", r.WORKFLOW)
+        names = ("accepted-image.json", "tinfoil-config.yml", "templates/synthetic-config.yml.in",
+                 "templates/persistent-bootstrap-config.yml.in", "templates/persistent-serve-config.yml.in",
+                 "scripts/synthetic-release.py", "scripts/test_synthetic_release.py", r.WORKFLOW)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             contents = {name: name.encode() for name in names}
@@ -998,6 +1002,8 @@ containers:
             source_files = {"accepted-image.json": json.dumps(receipt()).encode(),
                             "tinfoil-config.yml": self.config,
                             "templates/synthetic-config.yml.in": self.template,
+                            "templates/persistent-bootstrap-config.yml.in": (ROOT / "templates/persistent-bootstrap-config.yml.in").read_bytes(),
+                            "templates/persistent-serve-config.yml.in": (ROOT / "templates/persistent-serve-config.yml.in").read_bytes(),
                             "scripts/synthetic-release.py": SCRIPT.read_bytes(),
                             "scripts/test_synthetic_release.py": Path(__file__).read_bytes(),
                             r.WORKFLOW: (ROOT / r.WORKFLOW).read_bytes()}
@@ -1087,7 +1093,7 @@ containers:
         self.assertIn("expected_private_source", text)
         self.assertIn("expected_image_digest", text)
         self.assertIn("actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8", text)
-        official = "uses: tinfoilsh/measure-image-action@f2ec2fdf4510459730f0a5158c5817f5361e9461"
+        official = "uses: tinfoilsh/measure-image-action@59f7ab5dbe472b3097c888ebe64e6a4131fc0975"
         self.assertEqual(text.count(official), 1)
         self.assertIn("config-file: ${{ github.workspace }}/tinfoil-config.yml", text)
         self.assertIn("github-token: ${{ secrets.GITHUB_TOKEN }}", text)
@@ -1347,6 +1353,139 @@ def linux_output_probe():
                 r.require((output / "marker").read_bytes() == b"synthetic", "permissions")
     return {"offline_fixture": True, "stage0_denied": True, "stage1_group_write": True,
             "sdk_measurement": False, "observed_failure_cause_verified": False}
+
+
+class PersistentChecks(unittest.TestCase):
+    setUp = Checks.setUp
+    refuses = Checks.refuses
+
+    def template_for(self, phase):
+        return (ROOT / "templates" / r.PROFILES[phase][0]).read_bytes()
+
+    def test_exact_profiles_and_one_shot_commands(self):
+        self.assertEqual(set(r.PROFILES), {"disposable", "persistent-bootstrap", "persistent-serve"})
+        for phase in ("persistent-bootstrap", "persistent-serve"):
+            template = self.template_for(phase)
+            config = r.render(template, receipt(), CVM, phase)
+            r.config_gate(config, template, receipt(), phase)
+            self.assertIn(b"    owner: 65532\n", template)
+            self.assertIn(b"    persistent_volumes: ['ledger:/state']\n", template)
+            self.assertIn(b"    restart: 'no'\n", template)
+            self.assertIn(b"    read_only: true\n", template)
+            self.assertIn(b"      - LEDGER_VOLUME_KEY_B64\n", template)
+            self.assertIn(b"      - OTEL_SDK_DISABLED: 'true'\n", template)
+            for forbidden in (b"key-secret", b"keyserver", b"LEDGER_SYNTHETIC_STARTUP_DIAGNOSTICS", b"synthetic-serve"):
+                self.assertNotIn(forbidden, template)
+            if phase == "persistent-bootstrap":
+                self.assertIn(b"['init', '--state', '/state/ledger', '--tinfoil-volume', 'ledger', '--initialize-volume', '--operator']", template)
+                for forbidden in (b"healthcheck:", b"--listen", b"LEDGER_ADMIN_KEY"):
+                    self.assertNotIn(forbidden, template)
+                self.assertIn(b"      - LEDGER_OPERATOR_EMAIL\n      - LEDGER_OPERATOR_PASSWORD\n", template)
+            else:
+                self.assertIn(b"['serve', '--state', '/state/ledger', '--tinfoil-volume', 'ledger', '--operator', '--listen', '0.0.0.0:8090']", template)
+                self.assertIn(b"['CMD', '/bin/intake', 'synthetic-healthcheck']", template)
+                self.assertIn(b"      - LEDGER_ADMIN_KEY\n", template)
+                for forbidden in (b"--initialize-volume", b"LEDGER_OPERATOR_EMAIL", b"LEDGER_OPERATOR_PASSWORD"):
+                    self.assertNotIn(forbidden, template)
+
+    def test_template_or_rendered_config_mutation_refused(self):
+        for phase in ("persistent-bootstrap", "persistent-serve"):
+            template = self.template_for(phase)
+            config = r.render(template, receipt(), CVM, phase)
+            for before, after in ((b"owner: 65532", b"owner: 0"),
+                                  (b"restart: 'no'", b"restart: 'always'"),
+                                  (b"ledger:/state", b"other:/state"),
+                                  (b"/state/ledger", b"/state"),
+                                  (b"OTEL_SDK_DISABLED: 'true'", b"OTEL_SDK_DISABLED: 'false'")):
+                self.refuses("config", lambda: r.render(template.replace(before, after), receipt(), CVM, phase))
+                self.refuses("config", lambda: r.config_gate(config.replace(before, after), template, receipt(), phase))
+            for addition in (b"\n", b"keyserver-url: hostile\n", b"networks: {}\n"):
+                self.refuses("config", lambda: r.render(template + addition, receipt(), CVM, phase))
+                self.refuses("config", lambda: r.config_gate(config + addition, template, receipt(), phase))
+
+    def test_phase_templates_cannot_substitute_each_other(self):
+        for actual in r.PROFILES:
+            template = self.template_for(actual)
+            config = r.render(template, receipt(), CVM, actual)
+            for expected in r.PROFILES:
+                if expected == actual:
+                    continue
+                self.refuses("config", lambda: r.render(template, receipt(), CVM, expected))
+                self.refuses("config", lambda: r.config_gate(config, self.template_for(expected), receipt(), expected))
+
+    def test_dispatch_phase_must_be_explicit_closed_and_exact(self):
+        for phase in r.PROFILES:
+            env, payload = environment(), event()
+            env["RELEASE_STORAGE_PHASE"] = payload["inputs"]["expected_storage_phase"] = phase
+            self.assertEqual(r.context_gate(env, payload), (TAG, PUBLIC))
+            for bad in (None, "", "../" + SECRET, True, [], "persistent"):
+                changed = {**env, "RELEASE_STORAGE_PHASE": bad}
+                self.refuses("source", lambda: r.context_gate(changed, payload))
+            for other in r.PROFILES:
+                if other != phase:
+                    changed = copy.deepcopy(payload)
+                    changed["inputs"]["expected_storage_phase"] = other
+                    self.refuses("source", lambda: r.context_gate(env, changed))
+            changed = copy.deepcopy(payload)
+            del changed["inputs"]["expected_storage_phase"]
+            self.refuses("source", lambda: r.context_gate(env, changed))
+            del env["RELEASE_STORAGE_PHASE"]
+            self.refuses("source", lambda: r.context_gate(env, payload))
+
+    def test_exact_phase_specific_vm_shapes_and_bindings(self):
+        for phase in r.PROFILES:
+            config = r.render(self.template_for(phase), receipt(), CVM, phase)
+            value = manifest(config)
+            value["vm_shape"]["disks"] = 3 if phase == "disposable" else 4
+            self.assertEqual(r.manifest_gate(json.dumps(value), config, receipt(), phase), value)
+            for disks in (0, 2, 3, 4, 5, True, "4"):
+                if type(disks) is int and disks == value["vm_shape"]["disks"]:
+                    continue
+                changed = copy.deepcopy(value)
+                changed["vm_shape"]["disks"] = disks
+                self.refuses("manifest", lambda: r.manifest_gate(json.dumps(changed), config, receipt(), phase))
+            changed = copy.deepcopy(value)
+            changed["config"] = base64.b64encode(config + b"\n").decode()
+            self.refuses("manifest", lambda: r.manifest_gate(json.dumps(changed), config, receipt(), phase))
+            changed = copy.deepcopy(value)
+            changed["cmdline"] += " extra=1"
+            self.refuses("manifest", lambda: r.manifest_gate(json.dumps(changed), config, receipt(), phase))
+        self.refuses("manifest", lambda: r.manifest_gate(json.dumps(value), config, receipt(), "../" + SECRET))
+
+    def test_live_phase_swap_stops_before_source_or_vendor_work(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "templates").mkdir()
+            for phase in r.PROFILES:
+                (root / "templates" / r.PROFILES[phase][0]).write_bytes(self.template_for(phase))
+            (root / "accepted-image.json").write_text(json.dumps(receipt()))
+            for actual in r.PROFILES:
+                config = r.render(self.template_for(actual), receipt(), CVM, actual)
+                (root / "tinfoil-config.yml").write_bytes(config)
+                for expected in r.PROFILES:
+                    env, payload = environment(), event()
+                    env["RELEASE_STORAGE_PHASE"] = payload["inputs"]["expected_storage_phase"] = expected
+                    env["GITHUB_EVENT_PATH"] = str(root / "event.json")
+                    (root / "event.json").write_text(json.dumps(payload))
+                    with patch.dict(os.environ, env, clear=True), patch.object(r, "committed_files") as committed:
+                        if actual == expected:
+                            live = r.Live(root)
+                            self.assertEqual(live.phase, actual)
+                            self.assertEqual(live.config, config)
+                            committed.assert_called_once_with(root, PUBLIC)
+                        else:
+                            self.refuses("config", lambda: r.Live(root))
+                            committed.assert_not_called()
+
+    def test_unknown_render_phase_is_content_free_and_initiates_no_work(self):
+        output = io.StringIO()
+        with patch.object(r, "read_file") as read, patch.object(r, "checked_command") as command, contextlib.redirect_stdout(output):
+            self.assertEqual(r.cli(["render", "unused", CVM, "../" + SECRET]), 1)
+        detail = json.loads(output.getvalue())
+        self.assertEqual(detail["code"], "SYNTHETIC_CONFIG")
+        self.assertNotIn(SECRET, output.getvalue())
+        read.assert_not_called()
+        command.assert_not_called()
 
 
 if __name__ == "__main__":

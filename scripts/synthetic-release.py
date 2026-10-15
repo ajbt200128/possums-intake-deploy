@@ -24,10 +24,16 @@ OWNER = "ajbt200128"
 WORKFLOW = ".github/workflows/tinfoil-release.yml"
 IMAGE = "ghcr.io/ajbt200128/possums-intake-synthetic"
 # Deliberate adapter for upstream action.yaml, not an invocation of its composite.
-UPSTREAM = "f2ec2fdf4510459730f0a5158c5817f5361e9461"
-MEASURER = "ghcr.io/tinfoilsh/measure-image-action@sha256:3c341179eb0752269beeded9b1fb1f59715ee4c0914517cc1d8e10bac09891ca"
+UPSTREAM = "59f7ab5dbe472b3097c888ebe64e6a4131fc0975"
+MEASURER = "ghcr.io/tinfoilsh/measure-image-action@sha256:9209c8449896c15615fced1c30e7283f9eb33c254a47b29ded0b86a0c8e9a6d1"
 PREDICATE = "https://tinfoil.sh/predicate/snp-tdx-multiplatform/v1"
 TEMPLATE_HASH = "3ed591c27450d56887aabdb74ae466154c0da12d75b973ac20fd8dadb46b78e5"
+# Exact phase-specific bytes; never accept arbitrary YAML or disk counts.
+PROFILES = {
+    "disposable": ("synthetic-config.yml.in", TEMPLATE_HASH, 3),
+    "persistent-bootstrap": ("persistent-bootstrap-config.yml.in", "1f8204c8b0be394ee75e0feb00f69168cede18eb5e6084e3483da0e14035df93", 4),
+    "persistent-serve": ("persistent-serve-config.yml.in", "0b8e023d7daa78cc30e28dc2e050c5204495fe7d3c6c16e18db0039579c9b7e2", 4),
+}
 FIRMWARE_HASH = "78c890175928167a1bc095d4bf3bb4ad81de80cd7e4e9e683477fc359119c1c4"
 SHA = r"[0-9a-f]{40}"
 HEX = r"[0-9a-f]{64}"
@@ -167,34 +173,37 @@ def receipt_gate(raw):
     return value
 
 
-def render(template, receipt, cvm):
+def render(template, receipt, cvm, phase="disposable"):
     # Hash-fixed bytes avoid a second YAML parser/schema or arbitrary env fields.
-    require(sha(template) == TEMPLATE_HASH and pin(cvm, CVM), "config")
+    require(type(phase) is str and phase in PROFILES, "config")
+    require(sha(template) == PROFILES[phase][1] and pin(cvm, CVM), "config")
     receipt = receipt_gate(json.dumps(receipt).encode())
     require(template.count(b"@CVM_PIN@") == template.count(b"@IMAGE_DIGEST@") == 1, "config")
     return template.replace(b"@CVM_PIN@", cvm.encode()).replace(b"@IMAGE_DIGEST@", receipt["imageDigest"].encode())
 
 
-def config_gate(root, template, receipt):
+def config_gate(root, template, receipt, phase="disposable"):
     match = re.match(rb"cvm-version: (0\.14\.14)\n", root)
     require(match is not None, "config")
-    require(root == render(template, receipt, match[1].decode()), "config")
+    require(root == render(template, receipt, match[1].decode(), phase), "config")
 
 
-def command(args, code, *, token=False, timeout=120):
+def command(args, code, *, token=False, timeout=120, process_group=False):
     """Bounded transient pipes and cleanup, including overflow/interruption.
 
     Child env is allowlisted, never forwarded wholesale or printed. Token values
     occur only in process env. Caller decides whether nonzero means uncertainty.
     """
     def execute():
+        require(type(process_group) is bool and (not process_group or os.name == "posix"), code)
         env = {key: os.environ[key] for key in ("PATH", "HOME", "SSL_CERT_FILE") if key in os.environ}
         if token:
             require(bool(os.environ.get("GH_TOKEN")), code)
             env["GH_TOKEN"] = os.environ["GH_TOKEN"]
         # Popen.__exit__ waits without a deadline, so own cleanup explicitly.
         process = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, env=env)
+                                   stderr=subprocess.PIPE, env=env,
+                                   **({"start_new_session": True} if process_group else {}))
         primary = None
         result = None
         cleanup_failed = False
@@ -218,6 +227,16 @@ def command(args, code, *, token=False, timeout=120):
             primary = error if isinstance(error, Stop) else Stop(code)
         finally:
             try:
+                if process_group:
+                    try:
+                        os.killpg(process.pid, signal.SIGKILL)
+                        # A signal and leader join cannot prove descendant exit.
+                        # Retain owned caches whenever a remaining group needed it.
+                        cleanup_failed = True
+                    except ProcessLookupError:
+                        pass  # The owned group is already absent.
+                    except (Exception, KeyboardInterrupt):
+                        cleanup_failed = True
                 if process.poll() is None:
                     try:
                         process.kill()
@@ -314,8 +333,11 @@ def context_gate(env, event):
             and event["repository"].get("full_name") == REPO
             and event["sender"].get("login") == OWNER
             and event.get("ref") in (tag, "refs/tags/" + tag), "source")
+    phase = env.get("RELEASE_STORAGE_PHASE")
+    require(type(phase) is str and phase in PROFILES, "source")
     inputs = event.get("inputs")
-    require(type(inputs) is dict and inputs.get("publish") == "true" and inputs.get("expected_public_commit") == commit
+    require(type(inputs) is dict and inputs.get("expected_storage_phase") == phase
+            and inputs.get("publish") == "true" and inputs.get("expected_public_commit") == commit
             and inputs.get("expected_private_source") == env.get("RELEASE_PRIVATE_SHA")
             and inputs.get("expected_image_digest") == env.get("RELEASE_IMAGE_DIGEST"), "source")
     return tag, commit
@@ -359,13 +381,15 @@ def public_gate(env, event, receipt, get, *, completed=False):
 
 def committed_files(root, commit, run=checked_command):
     require(run(["git", "rev-parse", "HEAD"], "source").strip().decode() == commit, "source")
-    for name in ("accepted-image.json", "tinfoil-config.yml", "templates/synthetic-config.yml.in", "scripts/synthetic-release.py", "scripts/test_synthetic_release.py", WORKFLOW):
+    names = ("accepted-image.json", "tinfoil-config.yml", "scripts/synthetic-release.py", "scripts/test_synthetic_release.py", WORKFLOW)
+    for name in names + tuple("templates/" + profile[0] for profile in PROFILES.values()):
         mode = run(["git", "ls-tree", "HEAD", "--", name], "source")
         require(mode.startswith(b"100644 blob ") and mode.rstrip().endswith(b"\t" + name.encode()), "source")
         require(read_file(root / name, "source") == run(["git", "show", "HEAD:" + name], "source"), "source")
 
 
-def manifest_gate(raw, config, receipt):
+def manifest_gate(raw, config, receipt, phase="disposable"):
+    require(type(phase) is str and phase in PROFILES, "manifest")
     value = decode(raw, "manifest")
     def validate():
         require(type(value) is dict and set(value) == {"snp_measurement", "tdx_measurement", "firmware", "vm_shape", "cmdline", "hashes", "config"}, "manifest")
@@ -373,7 +397,7 @@ def manifest_gate(raw, config, receipt):
                 and value["config"] == base64.b64encode(config).decode()
                 and (IMAGE + "@" + receipt["imageDigest"]).encode() in config, "manifest")
         shape = value["vm_shape"]
-        require(shape == {"cpus": 2, "memory_mb": 8192, "gpus": 0, "disks": 3}
+        require(shape == {"cpus": 2, "memory_mb": 8192, "gpus": 0, "disks": PROFILES[phase][2]}
                 and all(type(item) is int for item in shape.values()), "manifest")
         hashes = value["hashes"]
         require(type(hashes) is dict and hashes == CVM_HASHES, "manifest")
@@ -527,7 +551,10 @@ class Live:
         self.event = decode(read_file(Path(self.env.get("GITHUB_EVENT_PATH", "")), "source"), "source")
         self.receipt = receipt_gate(read_file(root / "accepted-image.json", "receipt", 4096))
         self.config = read_file(root / "tinfoil-config.yml", "config", 4096)
-        config_gate(self.config, read_file(root / "templates/synthetic-config.yml.in", "config"), self.receipt)
+        self.phase = self.env.get("RELEASE_STORAGE_PHASE")
+        require(type(self.phase) is str and self.phase in PROFILES, "config")
+        template = read_file(root / "templates" / PROFILES[self.phase][0], "config")
+        config_gate(self.config, template, self.receipt, self.phase)
         self.tag, self.commit = context_gate(self.env, self.event)
         committed_files(root, self.commit)
         self.output = root / "output"
@@ -537,7 +564,7 @@ class Live:
 
     def manifest(self):
         raw = read_file(self.output / "tinfoil-deployment.json", "manifest")
-        return raw, manifest_gate(raw, self.config, self.receipt)
+        return raw, manifest_gate(raw, self.config, self.receipt, self.phase)
 
     def verify(self):
         raw, manifest = self.manifest()
@@ -576,9 +603,11 @@ def main(args):
     if args == ["status"]:
         return {"offline": True, "publication_requires_explicit_authorization": True, "private_ci_automatically_verified": False,
                 "deployment_adapter": False, "runtime_verified": False}
-    if len(args) == 3 and args[0] == "render":
+    if len(args) in (3, 4) and args[0] == "render":
+        phase = args[3] if len(args) == 4 else "disposable"
+        require(phase in PROFILES, "config")
         receipt = receipt_gate(read_file(Path(args[1]), "receipt", 4096))
-        raw = render(read_file(ROOT / "templates/synthetic-config.yml.in", "config"), receipt, args[2])
+        raw = render(read_file(ROOT / "templates" / PROFILES[phase][0], "config"), receipt, args[2], phase)
         safe("config", lambda: sys.stdout.buffer.write(raw))  # Offline stdout only.
         return None
     require(args in (["guard"], ["measure"], ["manifest"], ["publish"], ["verify-completed"]), "arguments")
@@ -597,7 +626,8 @@ def main(args):
     if args == ["manifest"]:
         raw, _ = safe("manifest", live.manifest)
         write_new(live.output / "tinfoil.hash", (sha(raw) + "\n").encode(), "manifest")
-        write_new(live.output / "release-notes.md", b"Disposable synthetic-only configuration. Operator-trusted private publication handoff; private source is not publicly inspectable. No deployment, real data, payments, live telemetry, runtime identity or durability qualification. Parent must verify this exact completed signed run and downloaded asset hashes before one separately admitted instance.\n", "manifest")
+        notes = ("Synthetic-only configuration phase: " + live.phase + ". Operator-trusted private publication handoff; private source is not publicly inspectable. No deployment, real data, payments, live telemetry, runtime identity or durability qualification. Parent must verify this exact completed signed run and downloaded asset hashes before one separately admitted instance.\n")
+        write_new(live.output / "release-notes.md", notes.encode(), "manifest")
         def output_digest():
             with Path(live.env["GITHUB_OUTPUT"]).open("a") as stream:
                 stream.write("digest=sha256:" + sha(raw) + "\n")
