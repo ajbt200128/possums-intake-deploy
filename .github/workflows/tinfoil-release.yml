@@ -21,7 +21,7 @@ on:
         required: true
         type: string
       expected_storage_phase:
-        description: Exact committed configuration phase (bootstrap formats a fresh blank disk once)
+        description: Exact committed configuration phase; serve never initializes storage
         required: true
         type: choice
         default: disposable
