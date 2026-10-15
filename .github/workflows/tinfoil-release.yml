@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Explicitly authorize one reviewed synthetic configuration release
+        description: Explicitly authorize one reviewed synthetic configuration phase release
         required: true
         type: boolean
         default: false
@@ -20,6 +20,15 @@ on:
         description: Operator-accepted immutable private image digest (sha256 prefix)
         required: true
         type: string
+      expected_storage_phase:
+        description: Exact committed configuration phase (bootstrap formats a fresh blank disk once)
+        required: true
+        type: choice
+        default: disposable
+        options:
+          - disposable
+          - persistent-bootstrap
+          - persistent-serve
 
 permissions: {}
 concurrency:
@@ -48,6 +57,7 @@ jobs:
       RELEASE_PUBLIC_SHA: ${{ inputs.expected_public_commit }}
       RELEASE_PRIVATE_SHA: ${{ inputs.expected_private_source }}
       RELEASE_IMAGE_DIGEST: ${{ inputs.expected_image_digest }}
+      RELEASE_STORAGE_PHASE: ${{ inputs.expected_storage_phase }}
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - name: Checkout the actual tag commit
@@ -56,7 +66,7 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
       - name: Offline boundary tests
-        run: python3 -m unittest discover -s scripts -p test_synthetic_release.py
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
       - name: Public source and typed absence admission
         env:
           GH_TOKEN: ${{ github.token }}
@@ -65,7 +75,7 @@ jobs:
         # Same pinned action and ephemeral CI-token boundary as ../possums.
         # The action owns the sole release-create call. No wrapper publication.
         # Parent verifies the completed run, manifest and assets before deployment.
-        uses: tinfoilsh/measure-image-action@f2ec2fdf4510459730f0a5158c5817f5361e9461 # v0.13.2
+        uses: tinfoilsh/measure-image-action@59f7ab5dbe472b3097c888ebe64e6a4131fc0975 # v0.14.0
         with:
           config-file: ${{ github.workspace }}/tinfoil-config.yml
           github-token: ${{ secrets.GITHUB_TOKEN }}
