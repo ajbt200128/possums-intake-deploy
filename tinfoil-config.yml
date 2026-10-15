@@ -2,27 +2,25 @@ cvm-version: 0.14.14
 cpus: 2
 memory: 8192
 gpus: 0
+volumes:
+  - name: ledger
+    owner: 65532
 shim:
   upstream-port: 8090
   paths: ['/*']
 containers:
-  - name: intake-synthetic
-    image: ghcr.io/ajbt200128/possums-intake-synthetic@sha256:3dd81e9e520e00129babff723110a14d4447b11d09fbdecc8328c913a40a8dd2
-    command: ['synthetic-serve', '--listen', '0.0.0.0:8090']
+  - name: intake-persistent-bootstrap
+    image: ghcr.io/ajbt200128/possums-intake-synthetic@sha256:9d384450ac2cc71c5b6b9a873dbe47173f2acd90eab7e6358be9bb97ff3cffb2
+    command: ['init', '--state', '/state/ledger', '--tinfoil-volume', 'ledger', '--initialize-volume', '--operator']
     user: '65532:65532'
     read_only: true
+    restart: 'no'
+    persistent_volumes: ['ledger:/state']
     tmpfs:
       /tmp: 'rw,nosuid,nodev,size=128m,mode=1777'
-    healthcheck:
-      test: ['CMD', '/proc/1/exe', 'synthetic-healthcheck']
-      interval: '10s'
-      timeout: '3s'
-      retries: 1
-      start_period: '5s'
     env:
       - OTEL_SDK_DISABLED: 'true'
-      - LEDGER_SYNTHETIC_STARTUP_DIAGNOSTICS: 'true'
     secrets:
-      - LEDGER_ADMIN_KEY
+      - LEDGER_VOLUME_KEY_B64
       - LEDGER_OPERATOR_EMAIL
       - LEDGER_OPERATOR_PASSWORD
