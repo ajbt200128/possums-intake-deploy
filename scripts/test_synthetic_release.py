@@ -336,6 +336,7 @@ containers:
     def test_committed_bytes_sha_and_file_modes_without_git_mutations(self):
         names = ("accepted-image.json", "tinfoil-config.yml", "templates/synthetic-config.yml.in",
                  "templates/persistent-bootstrap-config.yml.in", "templates/persistent-serve-config.yml.in",
+                 "templates/persistent-diagnostic-serve-config.yml.in",
                  "scripts/synthetic-release.py", "scripts/test_synthetic_release.py", r.WORKFLOW)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -1004,6 +1005,7 @@ containers:
                             "templates/synthetic-config.yml.in": self.template,
                             "templates/persistent-bootstrap-config.yml.in": (ROOT / "templates/persistent-bootstrap-config.yml.in").read_bytes(),
                             "templates/persistent-serve-config.yml.in": (ROOT / "templates/persistent-serve-config.yml.in").read_bytes(),
+                            "templates/persistent-diagnostic-serve-config.yml.in": (ROOT / "templates/persistent-diagnostic-serve-config.yml.in").read_bytes(),
                             "scripts/synthetic-release.py": SCRIPT.read_bytes(),
                             "scripts/test_synthetic_release.py": Path(__file__).read_bytes(),
                             r.WORKFLOW: (ROOT / r.WORKFLOW).read_bytes()}
@@ -1363,8 +1365,8 @@ class PersistentChecks(unittest.TestCase):
         return (ROOT / "templates" / r.PROFILES[phase][0]).read_bytes()
 
     def test_exact_profiles_and_one_shot_commands(self):
-        self.assertEqual(set(r.PROFILES), {"disposable", "persistent-bootstrap", "persistent-serve"})
-        for phase in ("persistent-bootstrap", "persistent-serve"):
+        self.assertEqual(set(r.PROFILES), {"disposable", "persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve"})
+        for phase in ("persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve"):
             template = self.template_for(phase)
             config = r.render(template, receipt(), CVM, phase)
             r.config_gate(config, template, receipt(), phase)
@@ -1389,19 +1391,76 @@ class PersistentChecks(unittest.TestCase):
                     self.assertNotIn(forbidden, template)
 
     def test_template_or_rendered_config_mutation_refused(self):
-        for phase in ("persistent-bootstrap", "persistent-serve"):
+        for phase in ("persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve"):
             template = self.template_for(phase)
             config = r.render(template, receipt(), CVM, phase)
             for before, after in ((b"owner: 65532", b"owner: 0"),
                                   (b"restart: 'no'", b"restart: 'always'"),
                                   (b"ledger:/state", b"other:/state"),
                                   (b"/state/ledger", b"/state"),
+                                  (b"LEDGER_VOLUME_KEY_B64", b"OTHER_FIXTURE_SECRET"),
                                   (b"OTEL_SDK_DISABLED: 'true'", b"OTEL_SDK_DISABLED: 'false'")):
                 self.refuses("config", lambda: r.render(template.replace(before, after), receipt(), CVM, phase))
                 self.refuses("config", lambda: r.config_gate(config.replace(before, after), template, receipt(), phase))
+            if phase != "persistent-bootstrap":
+                self.refuses("config", lambda: r.render(template.replace(b"['serve',", b"['serve', '--initialize-volume',"), receipt(), CVM, phase))
+                self.refuses("config", lambda: r.config_gate(config.replace(b"['serve',", b"['serve', '--initialize-volume',"), template, receipt(), phase))
             for addition in (b"\n", b"keyserver-url: hostile\n", b"networks: {}\n"):
                 self.refuses("config", lambda: r.render(template + addition, receipt(), CVM, phase))
                 self.refuses("config", lambda: r.config_gate(config + addition, template, receipt(), phase))
+
+    def test_managed_diagnostic_profile_is_exact_serve_plus_one_opt_in(self):
+        line = b"      - LEDGER_MANAGED_STARTUP_DIAGNOSTICS: 'true'\n"
+        serve = self.template_for("persistent-serve")
+        diagnostic = self.template_for("persistent-diagnostic-serve")
+        self.assertEqual(diagnostic, serve.replace(b"      - OTEL_SDK_DISABLED: 'true'\n",
+                                                  b"      - OTEL_SDK_DISABLED: 'true'\n" + line))
+        self.assertEqual(r.PROFILES["persistent-diagnostic-serve"],
+                         ("persistent-diagnostic-serve-config.yml.in",
+                          "c7ca16bf8d9d9fff81d6e70ef030c7a529b64c7d273956bab8feb4f7adb7be6a", 4))
+        for phase in r.PROFILES:
+            template = self.template_for(phase)
+            self.assertEqual(template.count(line), int(phase == "persistent-diagnostic-serve"))
+            self.assertEqual(template.count(b"LEDGER_MANAGED_STARTUP_DIAGNOSTICS"),
+                             int(phase == "persistent-diagnostic-serve"))
+        self.assertEqual(diagnostic.split(b"    secrets:\n", 1)[1],
+                         b"      - LEDGER_VOLUME_KEY_B64\n      - LEDGER_ADMIN_KEY\n")
+        workflow = (ROOT / r.WORKFLOW).read_text()
+        self.assertIn("        default: disposable\n        options:\n"
+                      "          - disposable\n          - persistent-bootstrap\n"
+                      "          - persistent-serve\n          - persistent-diagnostic-serve\n", workflow)
+
+    def test_managed_diagnostic_env_mutations_stop_before_live_work(self):
+        phase = "persistent-diagnostic-serve"
+        template = self.template_for(phase)
+        config = r.render(template, receipt(), CVM, phase)
+        line = b"      - LEDGER_MANAGED_STARTUP_DIAGNOSTICS: 'true'\n"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "templates").mkdir()
+            (root / "accepted-image.json").write_text(json.dumps(receipt()))
+            env, payload = environment(), event()
+            env["RELEASE_STORAGE_PHASE"] = payload["inputs"]["expected_storage_phase"] = phase
+            env["GITHUB_EVENT_PATH"] = str(root / "event.json")
+            (root / "event.json").write_text(json.dumps(payload))
+            with patch.dict(os.environ, env, clear=True), patch.object(r, "committed_files") as committed, \
+                 patch.object(r, "checked_command") as command, patch.object(r, "public_get") as get, \
+                 patch.object(r, "measure") as measure:
+                for replacement in (b"", line.replace(b"'true'", b"'false'"),
+                                    line + b"      - EXTRA_FIXTURE_ENV: 'true'\n",
+                                    line.replace(b"'true'", b"true")):
+                    changed_template = template.replace(line, replacement)
+                    changed_config = config.replace(line, replacement)
+                    self.refuses("config", lambda: r.render(changed_template, receipt(), CVM, phase))
+                    self.refuses("config", lambda: r.config_gate(changed_config, template, receipt(), phase))
+                    for supplied_template in (template, changed_template):
+                        (root / "templates" / r.PROFILES[phase][0]).write_bytes(supplied_template)
+                        (root / "tinfoil-config.yml").write_bytes(changed_config)
+                        self.refuses("config", lambda: r.Live(root))
+                committed.assert_not_called()
+                command.assert_not_called()
+                get.assert_not_called()
+                measure.assert_not_called()
 
     def test_phase_templates_cannot_substitute_each_other(self):
         for actual in r.PROFILES:

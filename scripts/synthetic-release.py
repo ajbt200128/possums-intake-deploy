@@ -33,6 +33,7 @@ PROFILES = {
     "disposable": ("synthetic-config.yml.in", TEMPLATE_HASH, 3),
     "persistent-bootstrap": ("persistent-bootstrap-config.yml.in", "1f8204c8b0be394ee75e0feb00f69168cede18eb5e6084e3483da0e14035df93", 4),
     "persistent-serve": ("persistent-serve-config.yml.in", "0b8e023d7daa78cc30e28dc2e050c5204495fe7d3c6c16e18db0039579c9b7e2", 4),
+    "persistent-diagnostic-serve": ("persistent-diagnostic-serve-config.yml.in", "c7ca16bf8d9d9fff81d6e70ef030c7a529b64c7d273956bab8feb4f7adb7be6a", 4),
 }
 FIRMWARE_HASH = "78c890175928167a1bc095d4bf3bb4ad81de80cd7e4e9e683477fc359119c1c4"
 SHA = r"[0-9a-f]{40}"
