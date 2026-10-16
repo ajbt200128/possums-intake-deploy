@@ -29,6 +29,7 @@ on:
           - disposable
           - persistent-bootstrap
           - persistent-serve
+          - persistent-diagnostic-serve
 
 permissions: {}
 concurrency:
