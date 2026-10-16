@@ -10,7 +10,7 @@ shim:
   paths: ['/*']
 containers:
   - name: intake-persistent
-    image: ghcr.io/ajbt200128/possums-intake-synthetic@sha256:9d384450ac2cc71c5b6b9a873dbe47173f2acd90eab7e6358be9bb97ff3cffb2
+    image: ghcr.io/ajbt200128/possums-intake-synthetic@sha256:f90c94f9f81fac6320d87557a75362bdbd702b7de18dc5c46ed94c0cc49a0ee8
     command: ['serve', '--state', '/state/ledger', '--tinfoil-volume', 'ledger', '--operator', '--listen', '0.0.0.0:8090']
     user: '65532:65532'
     read_only: true
@@ -26,6 +26,7 @@ containers:
       start_period: '35s'
     env:
       - OTEL_SDK_DISABLED: 'true'
+      - LEDGER_MANAGED_STARTUP_DIAGNOSTICS: 'true'
     secrets:
       - LEDGER_VOLUME_KEY_B64
       - LEDGER_ADMIN_KEY
