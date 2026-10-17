@@ -28,6 +28,7 @@ on:
         options:
           - disposable
           - persistent-bootstrap
+          - persistent-ledger-init
           - persistent-serve
           - persistent-diagnostic-serve
 

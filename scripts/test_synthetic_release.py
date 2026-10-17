@@ -337,6 +337,7 @@ containers:
         names = ("accepted-image.json", "tinfoil-config.yml", "templates/synthetic-config.yml.in",
                  "templates/persistent-bootstrap-config.yml.in", "templates/persistent-serve-config.yml.in",
                  "templates/persistent-diagnostic-serve-config.yml.in",
+                 "templates/persistent-ledger-init-config.yml.in",
                  "scripts/synthetic-release.py", "scripts/test_synthetic_release.py", r.WORKFLOW)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -1006,6 +1007,7 @@ containers:
                             "templates/persistent-bootstrap-config.yml.in": (ROOT / "templates/persistent-bootstrap-config.yml.in").read_bytes(),
                             "templates/persistent-serve-config.yml.in": (ROOT / "templates/persistent-serve-config.yml.in").read_bytes(),
                             "templates/persistent-diagnostic-serve-config.yml.in": (ROOT / "templates/persistent-diagnostic-serve-config.yml.in").read_bytes(),
+                            "templates/persistent-ledger-init-config.yml.in": (ROOT / "templates/persistent-ledger-init-config.yml.in").read_bytes(),
                             "scripts/synthetic-release.py": SCRIPT.read_bytes(),
                             "scripts/test_synthetic_release.py": Path(__file__).read_bytes(),
                             r.WORKFLOW: (ROOT / r.WORKFLOW).read_bytes()}
@@ -1365,8 +1367,8 @@ class PersistentChecks(unittest.TestCase):
         return (ROOT / "templates" / r.PROFILES[phase][0]).read_bytes()
 
     def test_exact_profiles_and_one_shot_commands(self):
-        self.assertEqual(set(r.PROFILES), {"disposable", "persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve"})
-        for phase in ("persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve"):
+        self.assertEqual(set(r.PROFILES), {"disposable", "persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve", "persistent-ledger-init"})
+        for phase in ("persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve", "persistent-ledger-init"):
             template = self.template_for(phase)
             config = r.render(template, receipt(), CVM, phase)
             r.config_gate(config, template, receipt(), phase)
@@ -1378,7 +1380,13 @@ class PersistentChecks(unittest.TestCase):
             self.assertIn(b"      - OTEL_SDK_DISABLED: 'true'\n", template)
             for forbidden in (b"key-secret", b"keyserver", b"LEDGER_SYNTHETIC_STARTUP_DIAGNOSTICS", b"synthetic-serve"):
                 self.assertNotIn(forbidden, template)
-            if phase == "persistent-bootstrap":
+            if phase == "persistent-ledger-init":
+                self.assertIn(b"['init', '--state', '/state/ledger', '--tinfoil-volume', 'ledger', '--operator']", template)
+                for forbidden in (b"--initialize-volume", b"healthcheck:", b"--listen", b"LEDGER_ADMIN_KEY",
+                                  b"LEDGER_MANAGED_STARTUP_DIAGNOSTICS"):
+                    self.assertNotIn(forbidden, template)
+                self.assertIn(b"      - LEDGER_OPERATOR_EMAIL\n      - LEDGER_OPERATOR_PASSWORD\n", template)
+            elif phase == "persistent-bootstrap":
                 self.assertIn(b"['init', '--state', '/state/ledger', '--tinfoil-volume', 'ledger', '--initialize-volume', '--operator']", template)
                 for forbidden in (b"healthcheck:", b"--listen", b"LEDGER_ADMIN_KEY"):
                     self.assertNotIn(forbidden, template)
@@ -1391,7 +1399,7 @@ class PersistentChecks(unittest.TestCase):
                     self.assertNotIn(forbidden, template)
 
     def test_template_or_rendered_config_mutation_refused(self):
-        for phase in ("persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve"):
+        for phase in ("persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve", "persistent-ledger-init"):
             template = self.template_for(phase)
             config = r.render(template, receipt(), CVM, phase)
             for before, after in ((b"owner: 65532", b"owner: 0"),
@@ -1402,12 +1410,101 @@ class PersistentChecks(unittest.TestCase):
                                   (b"OTEL_SDK_DISABLED: 'true'", b"OTEL_SDK_DISABLED: 'false'")):
                 self.refuses("config", lambda: r.render(template.replace(before, after), receipt(), CVM, phase))
                 self.refuses("config", lambda: r.config_gate(config.replace(before, after), template, receipt(), phase))
-            if phase != "persistent-bootstrap":
+            if phase in ("persistent-serve", "persistent-diagnostic-serve"):
                 self.refuses("config", lambda: r.render(template.replace(b"['serve',", b"['serve', '--initialize-volume',"), receipt(), CVM, phase))
                 self.refuses("config", lambda: r.config_gate(config.replace(b"['serve',", b"['serve', '--initialize-volume',"), template, receipt(), phase))
             for addition in (b"\n", b"keyserver-url: hostile\n", b"networks: {}\n"):
                 self.refuses("config", lambda: r.render(template + addition, receipt(), CVM, phase))
                 self.refuses("config", lambda: r.config_gate(config + addition, template, receipt(), phase))
+
+    def test_ledger_init_exact_template_render_and_manifest(self):
+        phase = "persistent-ledger-init"
+        template = self.template_for(phase)
+        expected = b"""cvm-version: @CVM_PIN@
+cpus: 2
+memory: 8192
+gpus: 0
+volumes:
+  - name: ledger
+    owner: 65532
+shim:
+  upstream-port: 8090
+  paths: ['/*']
+containers:
+  - name: intake-persistent-ledger-init
+    image: ghcr.io/ajbt200128/possums-intake-synthetic@@IMAGE_DIGEST@
+    command: ['init', '--state', '/state/ledger', '--tinfoil-volume', 'ledger', '--operator']
+    user: '65532:65532'
+    read_only: true
+    restart: 'no'
+    persistent_volumes: ['ledger:/state']
+    tmpfs:
+      /tmp: 'rw,nosuid,nodev,size=128m,mode=1777'
+    env:
+      - OTEL_SDK_DISABLED: 'true'
+    secrets:
+      - LEDGER_VOLUME_KEY_B64
+      - LEDGER_OPERATOR_EMAIL
+      - LEDGER_OPERATOR_PASSWORD
+"""
+        self.assertEqual(template, expected)
+        self.assertEqual(r.PROFILES[phase], ("persistent-ledger-init-config.yml.in",
+                         "8acff60da11650f0ccea6cf0eea1739cf58b14fcf3af68b80c89037e25784d45", 4))
+        self.assertEqual(r.sha(template), r.PROFILES[phase][1])
+        config = r.render(template, receipt(), CVM, phase)
+        self.assertEqual(config, expected.replace(b"@CVM_PIN@", CVM.encode()).replace(
+            b"@IMAGE_DIGEST@", receipt()["imageDigest"].encode()))
+        r.config_gate(config, template, receipt(), phase)
+        value = manifest(config)
+        value["vm_shape"]["disks"] = 4
+        self.assertEqual(r.manifest_gate(json.dumps(value), config, receipt(), phase), value)
+        self.assertEqual(r.render(self.template, receipt(), CVM), self.config)
+        r.config_gate(self.config, self.template, receipt())
+        self.refuses("config", lambda: r.render(template, receipt(), CVM))
+        self.refuses("config", lambda: r.config_gate(config, template, receipt()))
+
+    def test_ledger_init_mutations_stop_before_guard_side_effects(self):
+        phase = "persistent-ledger-init"
+        template = self.template_for(phase)
+        config = r.render(template, receipt(), CVM, phase)
+        mutations = ((b"'--operator']", b"'--initialize-volume', '--operator']"),
+                     (b"['init',", b"['serve',"),
+                     (b"'--operator']", b"'--operator', '--listen', '0.0.0.0:8090']"),
+                     (b"    env:\n", b"    healthcheck:\n      test: ['CMD', '/bin/intake', 'synthetic-healthcheck']\n    env:\n"),
+                     (b"      - OTEL_SDK_DISABLED: 'true'\n",
+                      b"      - OTEL_SDK_DISABLED: 'true'\n      - LEDGER_MANAGED_STARTUP_DIAGNOSTICS: 'true'\n"),
+                     (b"    secrets:\n", b"    secrets:\n      - LEDGER_ADMIN_KEY\n"))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "templates").mkdir()
+            (root / "accepted-image.json").write_text(json.dumps(receipt()))
+            env, payload = environment(), event()
+            env["RELEASE_STORAGE_PHASE"] = payload["inputs"]["expected_storage_phase"] = phase
+            env["GITHUB_EVENT_PATH"] = str(root / "event.json")
+            (root / "event.json").write_text(json.dumps(payload))
+            real_live = r.Live
+            with patch.dict(os.environ, env, clear=True), patch.object(r, "committed_files") as committed, \
+                 patch.object(r, "command") as command, patch.object(r, "public_get") as get, \
+                 patch.object(r, "measure") as measure, patch.object(r, "Live", side_effect=lambda: real_live(root)):
+                for before, after in mutations:
+                    with self.subTest(mutation=before):
+                        self.assertIn(before, template)
+                        changed_template = template.replace(before, after)
+                        changed_config = config.replace(before, after)
+                        self.refuses("config", lambda: r.render(changed_template, receipt(), CVM, phase))
+                        self.refuses("config", lambda: r.config_gate(changed_config, template, receipt(), phase))
+                        for supplied_template in (template, changed_template):
+                            (root / "templates" / r.PROFILES[phase][0]).write_bytes(supplied_template)
+                            (root / "tinfoil-config.yml").write_bytes(changed_config)
+                            stream = io.StringIO()
+                            with contextlib.redirect_stdout(stream):
+                                self.assertEqual(r.cli(["guard"]), 1)
+                            self.assertEqual(json.loads(stream.getvalue())["code"], "SYNTHETIC_CONFIG")
+                            self.assertFalse((root / "output").exists())
+                committed.assert_not_called()
+                command.assert_not_called()
+                get.assert_not_called()
+                measure.assert_not_called()
 
     def test_managed_diagnostic_profile_is_exact_serve_plus_one_opt_in(self):
         line = b"      - LEDGER_MANAGED_STARTUP_DIAGNOSTICS: 'true'\n"
@@ -1428,6 +1525,7 @@ class PersistentChecks(unittest.TestCase):
         workflow = (ROOT / r.WORKFLOW).read_text()
         self.assertIn("        default: disposable\n        options:\n"
                       "          - disposable\n          - persistent-bootstrap\n"
+                      "          - persistent-ledger-init\n"
                       "          - persistent-serve\n          - persistent-diagnostic-serve\n", workflow)
 
     def test_managed_diagnostic_env_mutations_stop_before_live_work(self):
