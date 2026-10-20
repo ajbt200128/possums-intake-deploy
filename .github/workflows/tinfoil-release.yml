@@ -29,6 +29,7 @@ on:
           - disposable
           - persistent-bootstrap
           - persistent-ledger-init
+          - persistent-website-init
           - persistent-serve
           - persistent-diagnostic-serve
 

@@ -88,6 +88,45 @@ After immediate native identity/attachment/shape and existing secret-name checks
 
 Bounded default-verified-TLS/nonredirecting passive vendor status HTTP 200 returned **two available/recent/advancing snapshots** of the exact declared init image and same process **exited 0**, OOM false, restart count 0, policy `no`, with no Docker state-error text. Native current v0.1.13 boot/tag/attachment/host/domain matched before/after. Vendor status can preserve previous state when inspection fails, so nonempty `unavailable`, stale/nonadvancing or mismatched observations were rejected. Only closed outcomes were retained; no raw errors/logs, identifiers/timestamps or secret values/lengths. This observed process completion clears the conditional serving gate; Native Running alone would not. It does not establish financial/durability readiness, fresh runtime attestation or the original bootstrap failure's cause. Any failed/unknown init would instead have blocked serving and replay. No disk formatting, clearing/repair, reset/restore, allocation, key access, verifier bypass, init recorder/listener, raw logs, inference, gateway/DNS change, telemetry or automatic retry. Managed-key custody/platform decryption, native retention, beta rollback limits and all real-data/runtime/operator/accounting/capacity/durability gates remain unchanged.
 
+## Additive website setup — separately authorized candidate
+
+The operator subsequently authorized one additive website setup boot followed by
+one serving activation on the same existing synthetic disk/key, only after fresh
+source/image/native matching-build and signed-release gates. Other application,
+registry, release and deployment writers were confirmed paused. This supersedes
+the unused earlier serving-only allowance for this packet, not the preservation,
+privacy or exact-source protections. No live website setup or serving receipt is
+established here; root config and accepted-image pins remain unchanged until the
+new private publication is accepted.
+
+The new fixed `persistent-website-init` profile runs exactly
+`website-init --state /state/ledger --tinfoil-volume ledger`, using only the
+existing `LEDGER_VOLUME_KEY_B64` secret name. It unlocks existing storage and
+validates the existing ledger before adding compatible website/auth schema/code;
+it never initializes disk/ledger state, creates/resets login credentials, adds
+funding or overwrites valid publication. Keep restart `no`, no listener or
+healthcheck/diagnostic opt-in, UID/GID65532, read-only root/tmpfs, original volume
+binding, CPU2/memory8192/GPU0, CVM 0.14.14 and exactly four measured disks. Existing
+five profiles and their immutable historical releases remain unchanged. This is
+not a new bootstrap or a recovery path for missing/incompatible state.
+
+Require independently accepted immutable setup release and actual supported
+process exit-zero evidence before the separately signed `persistent-serve` phase.
+Running alone is insufficient. Failure or unknown setup outcome stops serving;
+no replay, disk/key replacement, credential reset or financial restore is
+authorized. Tinfoil key custody/decryption, partial additive setup, normal SDK
+maintenance and native-history retention remain boundaries. Agent access stays
+secret-name metadata only. Parent independently passed all **92 offline release
+tests**, exact template/hash/phase isolation and whitespace checks. Actual pinned
+Go1.27.2 decoder probes now cover all six profiles: v0.1.14 rejects persistent
+bindings with positive controls; v0.1.16 and runtime v0.1.17 accept exact
+owner/binding and reject unsafe-field/owner alternatives. Owned module-cache
+cleanup completed after joined tools. Independent source/API security review
+found no actionable issue and did not duplicate execution. Fresh private image,
+native matching builds, publication/signature and actual process completion
+remain gates; no activation, durability, runtime-attestation or real-data
+acceptance follows from these local results.
+
 ## Ordinary existing-only serving — fresh signed handoff pending
 
 The root renders the **unchanged `persistent-serve` template** (`0b8e023d7daa78cc30e28dc2e050c5204495fe7d3c6c16e18db0039579c9b7e2`) with the same qualified image/receipt/CVM. This intentionally selects ordinary serving, **without managed startup diagnostic opt-in**, rather than broadening temporary recording. It contains no init/format flag or operator credential inputs/upsert; only existing volume/shared accounting-key secret names. Passive exec health, 35-second startup grace, restart `no`, resources, UID, mount and four-disk manifest requirements remain unchanged. No templates/helpers/workflows/receipt/Go source change accompanies this two-file root/document handoff.
