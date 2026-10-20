@@ -1,5 +1,11 @@
 # Possums intake: synthetic deployment
 
+**Current root: additive website setup candidate.** The newly qualified and
+published website image is selected through `persistent-website-init`; its signed
+release and actual setup exit-zero gate are still pending. This supersedes older
+root/unused-serving descriptions below for the current packet only. Preserve the
+existing disk/key; no ledger initialization or serving activation has run here.
+
 This public repository holds measured Tinfoil configuration and release evidence for one synthetic-only ledger instance. The separately signed persistent-bootstrap v0.1.6 has replaced the old disposable instance and reached platform Running with the original disk attached. That platform status alone does not establish successful application initialization or durability. Ordinary serving v0.1.7 subsequently failed its healthcheck after image pull/start. The separately signed diagnostic serving v0.1.8 also failed health and reported the closed managed-key input validation code below. The operator then explicitly approved discarding the old synthetic disk and creating one blank replacement with a privately updated/saved key. That approved reset and one v0.1.10 bootstrap ran, but the process reports exit 1. The v0.1.11 existing-only diagnostic boot then failed with the closed mount-verification code below. The separately signed mount-ID-corrected v0.1.12 existing-only boot reached the ledger-open checkpoint but failed with `LEDGER_STARTUP_MISSING_STATE`; the preserved disk/key remain unchanged. After disclosure, the operator explicitly approved the distinct guarded ledger-only initialization below, without disk formatting, and one later existing-only serving boot only after observed init exit 0. That v0.1.13 init process now reports exited 0 in two available/recent/advancing native snapshots; the root prepares the separately signed ordinary existing-only serving phase, not another initialization. The application source remains private; the operator-authorized synthetic container package is public and its binary is reverse-engineerable. Public configuration and release measurements do not make private application code independently inspectable.
 
 ## Persistent candidate — separate disk bootstrap, ledger init and serve releases
@@ -96,8 +102,8 @@ source/image/native matching-build and signed-release gates. Other application,
 registry, release and deployment writers were confirmed paused. This supersedes
 the unused earlier serving-only allowance for this packet, not the preservation,
 privacy or exact-source protections. No live website setup or serving receipt is
-established here; root config and accepted-image pins remain unchanged until the
-new private publication is accepted.
+established here. Root now selects the unchanged exact website-setup template
+with the newly accepted image receipt below; it is not another ledger bootstrap.
 
 The new fixed `persistent-website-init` profile runs exactly
 `website-init --state /state/ledger --tinfoil-volume ledger`, using only the
@@ -122,10 +128,37 @@ Go1.27.2 decoder probes now cover all six profiles: v0.1.14 rejects persistent
 bindings with positive controls; v0.1.16 and runtime v0.1.17 accept exact
 owner/binding and reject unsafe-field/owner alternatives. Owned module-cache
 cleanup completed after joined tools. Independent source/API security review
-found no actionable issue and did not duplicate execution. Fresh private image,
-native matching builds, publication/signature and actual process completion
-remain gates; no activation, durability, runtime-attestation or real-data
-acceptance follows from these local results.
+found no actionable issue and did not duplicate execution.
+
+**Accepted website image handoff:** exact private main
+`5fea2c37abbe4a3dd66f30eac37bfc3dbd4c9017`, source check **39370806432** and
+native qualification **39371558499**, attempt 1, passed. Parent independently
+admitted/downloaded the original unexpired A **12242120926**, B **12241263047**
+and archive **12241851528**, verified distinct native runners, exact-source/job
+steps and matching AMD64 archive/manifest/config plus actual ordinary/website/
+restart/synthetic/startup receipts. Browser inside the image remains `not_run`.
+Receipt: image `sha256:53e7927ef2e13a7346051734ac174ab3666cc01c86057d080084b3e2c0a9cb91`,
+archive `fbaeecb696b388b3b06aa9e81c6689126fefc62d771548bd9e702537f66d195a`.
+
+The original manual owner adapter and matching shared qualification extraction
+were recovered from local Git objects and reviewed before reuse; none were
+silently substituted with the CI-authority wrapper. Its sole adaptation relocates
+the pinned native Skopeo1.24.1 policy path to the current fixed package while
+retaining identical required policy bytes. All **71 focused offline regressions**
+passed after correcting two missing local workflow fixtures. Independent static
+security review found no actionable issue and did not duplicate execution.
+One owner-authenticated `--preserve-digests --retry-times 0` copy completed after
+unchanged exact-main/native/artifact/package-source-link/complete-inventory/
+baseline/unused-tag gates. Actual registry digest and package postchecks passed;
+tools/auth and owned public material cleanup completed. No grants, CI metadata
+guards, TLS, credentials or runtime source changed. Native history/public caches
+remain separate retention boundaries; no erasure guarantee.
+
+This three-file handoff changes only receipt, exact rendered root and evidence.
+Fresh immutable signing/downloaded-byte cryptographic acceptance and actual
+setup process exit zero remain required before separately signed serving. No
+activation, managed unlock/setup, durability, runtime-attestation or real-data
+acceptance follows from image publication.
 
 ## Ordinary existing-only serving — fresh signed handoff pending
 

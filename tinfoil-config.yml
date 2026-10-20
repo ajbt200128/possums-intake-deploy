@@ -9,23 +9,16 @@ shim:
   upstream-port: 8090
   paths: ['/*']
 containers:
-  - name: intake-persistent
-    image: ghcr.io/ajbt200128/possums-intake-synthetic@sha256:15e1d7161a1a654b0f76df5c6e9346fb30f8e5098d954cd777e276995180e80a
-    command: ['serve', '--state', '/state/ledger', '--tinfoil-volume', 'ledger', '--operator', '--listen', '0.0.0.0:8090']
+  - name: intake-persistent-website-init
+    image: ghcr.io/ajbt200128/possums-intake-synthetic@sha256:53e7927ef2e13a7346051734ac174ab3666cc01c86057d080084b3e2c0a9cb91
+    command: ['website-init', '--state', '/state/ledger', '--tinfoil-volume', 'ledger']
     user: '65532:65532'
     read_only: true
     restart: 'no'
     persistent_volumes: ['ledger:/state']
     tmpfs:
       /tmp: 'rw,nosuid,nodev,size=128m,mode=1777'
-    healthcheck:
-      test: ['CMD', '/bin/intake', 'synthetic-healthcheck']
-      interval: '10s'
-      timeout: '3s'
-      retries: 1
-      start_period: '35s'
     env:
       - OTEL_SDK_DISABLED: 'true'
     secrets:
       - LEDGER_VOLUME_KEY_B64
-      - LEDGER_ADMIN_KEY
