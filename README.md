@@ -1,11 +1,12 @@
 # Possums intake: synthetic deployment
 
-**Current root: website-enabled existing-only serving candidate.** The qualified
-website image is selected through the unchanged `persistent-serve` template,
-after accepted signed v0.1.15 additive setup and observed actual setup exit zero.
-Fresh serving signing and activation remain pending. This supersedes older root
-and unused-serving descriptions below for this packet only. Preserve the current
-disk/key; no ledger initialization or website-enabled serving activation ran here.
+**Current root: accepted website-enabled existing-only serving.** Signed
+**v0.1.16** was activated once after signed v0.1.15 additive setup exited zero.
+Native running/healthy and credential-free HTTPS website/assets checks passed.
+This supersedes older root and unused-serving descriptions below for this packet
+only. Preserve the current disk/key; both setup and serving allowances are
+consumed. Financial/durability, fresh runtime-attestation and real-data acceptance
+remain unqualified.
 
 This public repository holds measured Tinfoil configuration and release evidence for one synthetic-only ledger instance. The separately signed persistent-bootstrap v0.1.6 has replaced the old disposable instance and reached platform Running with the original disk attached. That platform status alone does not establish successful application initialization or durability. Ordinary serving v0.1.7 subsequently failed its healthcheck after image pull/start. The separately signed diagnostic serving v0.1.8 also failed health and reported the closed managed-key input validation code below. The operator then explicitly approved discarding the old synthetic disk and creating one blank replacement with a privately updated/saved key. That approved reset and one v0.1.10 bootstrap ran, but the process reports exit 1. The v0.1.11 existing-only diagnostic boot then failed with the closed mount-verification code below. The separately signed mount-ID-corrected v0.1.12 existing-only boot reached the ledger-open checkpoint but failed with `LEDGER_STARTUP_MISSING_STATE`; the preserved disk/key remain unchanged. After disclosure, the operator explicitly approved the distinct guarded ledger-only initialization below, without disk formatting, and one later existing-only serving boot only after observed init exit 0. That v0.1.13 init process now reports exited 0 in two available/recent/advancing native snapshots; the root prepares the separately signed ordinary existing-only serving phase, not another initialization. The application source remains private; the operator-authorized synthetic container package is public and its binary is reverse-engineerable. Public configuration and release measurements do not make private application code independently inspectable.
 
@@ -200,11 +201,48 @@ The additive setup allowance is consumed. This clears its conditional serving
 gate only, not financial/durability/capacity, fresh runtime-attestation or real-data
 acceptance; browser-inside-image remains `not_run`.
 
-## Website-enabled existing-only serving — fresh signed handoff pending
+## Website-enabled existing-only serving — v0.1.16 accepted
 
 The root renders the **unchanged `persistent-serve` template** (`0b8e023d7daa78cc30e28dc2e050c5204495fe7d3c6c16e18db0039579c9b7e2`) with the same qualified image/receipt/CVM. This intentionally selects ordinary serving, **without managed startup diagnostic opt-in**, rather than broadening temporary recording. It contains no init/format flag or operator credential inputs/upsert; only existing volume/shared accounting-key secret names. Passive exec health, 35-second startup grace, restart `no`, resources, UID, mount and four-disk manifest requirements remain unchanged. No templates/helpers/workflows/receipt/Go source change accompanies this two-file root/document handoff.
 
-Focused offline phase/refusal checks, independent scoped review, normal protected integration, a fresh immutable signed release and actual downloaded-byte/source/signer/invocation/config/CVM/shape verification precede activation. Refresh original source/artifact/registry/native evidence, then one supported Stop→authoritative Stopped→existing-only Deploy on the same disk/key/host/domain/shape, selecting only existing volume/admin secret names. Both the historical ledger-init exit 0 and newly observed v0.1.15 additive website-setup exit 0 are required; neither authorizes repeating initialization or setup. This serving allowance is still **unused**; no new activation is established by the candidate. Native Running/healthy remains distinct from financial readiness, capacity/durability and fresh runtime attestation. No formatting/initialization/clearing/restore/new allocation/key access, gateway/DNS change, inference, telemetry or automatic retry.
+Parent **92 offline tests**, exact render/all-other-phase refusals, unchanged
+receipt and two-file scope passed; independent read-only review found no
+actionable issue. Public PR **12** normally head-matched merged as
+`43f98f3fca04f8a436c5045e3ed0ba9769c2cc28`. Fresh **v0.1.16** signing run
+**39449002638**, attempt 1, succeeded. Parent independently accepted downloaded
+2,545-byte manifest/65-byte hash assets, metadata/hash and supported cryptographic
+source/signer/tag/invocation/exact config/CVM/four-disk bindings. Manifest SHA256
+`575305fb980fe5c3de8d6ea171f493f6ef02fbf72e6d3d5ff001b12953521b7d`;
+config SHA256 `dd662a5a7b500e4a63e24f929cd15b2b130ff410a6251cc434a6efe5cada02bd`.
+
+Source/original unexpired native artifacts, exact AMD64 archive/runtime receipts,
+complete package/private-source link/version inventory/baseline/current-image
+tag, zero-retry registry digest and immutable release were refreshed before
+activation. Two fresh matching setup-process exit-zero observations preceded
+exactly **one Stop → authoritative Stopped → one v0.1.16 existing-only Deploy**.
+The same instance/original 1 GiB disk/host/domain/shape and saved variables/SSH
+settings remained unchanged, CC on/debug off. Only existing volume/admin secret
+names were selected; no values were read or changed. No Update/replan/repost,
+attachment/allocation, initialization/reset/restore, credential change or replay.
+Both setup and serving allowances are now **consumed**.
+
+Two available/recent/advancing vendor snapshots over ordinary verified TLS show
+the same exact declared serving image/process **running/healthy**, health exit 0,
+OOM false, restart count 0, policy `no`, absent state-error text, with matching
+native current boot/storage/host/domain/shape before/after. Nonredirecting HTTPS
+`/healthz`, `/`, `/login` and `/_/` returned **200**. Public home and login form,
+no-script/no-store/security headers and Secure/HttpOnly/host-only/SameSite CSRF
+cookie attributes passed without retaining cookie values/pages. Published CSS,
+both fonts and OFL bytes/SHA256 matched; unauthenticated `/home` returned **303**
+to `/login`. No login, funding, inference, gateway/DNS change or telemetry export
+was attempted. Native admin evidence is the unauthenticated shell only, not
+successful administrator authentication. Browser-inside-image remains `not_run`.
+These checks establish bounded synthetic readiness, not financial/operator
+acceptance, usable capacity/durability, fresh runtime attestation, safe financial
+restore or real-data/gateway integration. Native history/platform retention
+remain separate; no raw errors/payloads, runtime identifiers/timestamps or secret
+values are included. Later documentation-only commits do not change the immutable
+release source or qualify a future replacement.
 
 ## Historical disposable scope — v0.1.5 retired by bootstrap
 
