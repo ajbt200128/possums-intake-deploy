@@ -1,18 +1,24 @@
 # Possums intake: synthetic deployment
 
-**Current root: separately approved existing-ledger upgrade candidate; not activated.**
-The new accepted image and exact `persistent-ledger-upgrade` rendering prepare one
-stopped-service v1-to-v2 schema migration, never disk/ledger initialization.
-Running service remains signed **v0.1.16**. One later separately signed ordinary
-serving activation requires actual migration-process exit zero. Preserve the same
-instance/disk/key and all operator test state; no retry/reset/restore or old-binary
-rollback against v2. This supersedes older root/unused-allowance descriptions only
-for this packet. Financial/durability, fresh runtime-attestation, gateway/client
-integration and real-data acceptance remain unqualified.
+**Current root: ordinary existing-only serving candidate after observed upgrade exit zero.**
+Signed **v0.1.17** ran the one approved stopped-service v1-to-v2 migration; two
+recent, available, advancing snapshots of the same exact process report exited 0,
+with final native identity/storage checks passed. Root now renders the unchanged
+`persistent-serve` template with that same accepted image/receipt, not another
+upgrade or initialization. The separate serving release/activation is still
+pending. Preserve the same instance/disk/key and all operator test state; no
+retry/reset/restore or old-binary rollback against v2. This supersedes older root/
+unused-allowance descriptions only for this packet. Existing native customer-token
+duration is not yet updated/verified as twelve hours. Financial/durability, fresh
+runtime-attestation, gateway/client integration and real-data acceptance remain
+unqualified.
 
 This public repository holds measured Tinfoil configuration and release evidence for one synthetic-only ledger instance. The separately signed persistent-bootstrap v0.1.6 has replaced the old disposable instance and reached platform Running with the original disk attached. That platform status alone does not establish successful application initialization or durability. Ordinary serving v0.1.7 subsequently failed its healthcheck after image pull/start. The separately signed diagnostic serving v0.1.8 also failed health and reported the closed managed-key input validation code below. The operator then explicitly approved discarding the old synthetic disk and creating one blank replacement with a privately updated/saved key. That approved reset and one v0.1.10 bootstrap ran, but the process reports exit 1. The v0.1.11 existing-only diagnostic boot then failed with the closed mount-verification code below. The separately signed mount-ID-corrected v0.1.12 existing-only boot reached the ledger-open checkpoint but failed with `LEDGER_STARTUP_MISSING_STATE`; the preserved disk/key remain unchanged. After disclosure, the operator explicitly approved the distinct guarded ledger-only initialization below, without disk formatting, and one later existing-only serving boot only after observed init exit 0. That v0.1.13 init process now reports exited 0 in two available/recent/advancing native snapshots; the root prepares the separately signed ordinary existing-only serving phase, not another initialization. The application source remains private; the operator-authorized synthetic container package is public and its binary is reverse-engineerable. Public configuration and release measurements do not make private application code independently inspectable.
 
-## Renewable-hold upgrade — accepted image, maintenance not activated
+## Renewable-hold upgrade — historical image/maintenance handoff
+
+This subsection records the pre-activation handoff, not an unused authorization.
+The consumed v0.1.17 migration receipt follows below; do not rerun that phase.
 
 The operator approved the intake-only twelve-hour native customer-token default,
 conditional renewable holds, and explicit state-preserving schema v1-to-v2
@@ -57,8 +63,8 @@ remain separate persistence boundaries; cleanup is not secure erasure.
 Public fixed-profile PR **14** merged normally at
 `541c7ac175a4a267abf7ea9cd0f2806e38eefc1e`. Parent **94** offline tests and actual
 pinned v0.1.14 refusal/v0.1.16/v0.1.17 acceptance with negative controls cover all
-seven phases; independent source-only review found no blockers. Root now renders
-only the new exact upgrade template from the accepted receipt, preserving CPU2 /
+seven phases; independent source-only review found no blockers. At that checkpoint,
+root rendered only the new exact upgrade template from the accepted receipt, preserving CPU2 /
 memory8192 / GPU0, CVM/UID/volume ownership, four disks, read-only root/tmpfs,
 restart `no`, existing `/state/ledger`, and **only** the existing managed volume-key
 secret name. No listener, healthcheck, diagnostics, initialization, credentials or
@@ -71,11 +77,69 @@ completion. Failure or unknown result stops without replay/reset/restore or
 old-binary rollback. Source/render/receipt review, immutable signing, downloaded
 asset/cryptographic source/invocation/config/CVM/four-disk acceptance, original
 artifact/registry refresh and immediate native identity/storage/shape checks
-remain gates; no downtime or migration has occurred. Downtime may exceed one–two
-minutes. No new resource, key/secret-binding change, real funds, payment work,
+were still gates at that checkpoint; downtime and migration had not begun. They
+subsequently passed for v0.1.17 as recorded below. Downtime beyond one–two minutes
+was accepted. No new resource, key/secret-binding change, real funds, payment work,
 inference, telemetry export, gateway deployment or client installation is allowed.
 Managed key custody/platform decryption, beta volume rollback limits, native
 retention and real-data/runtime/accounting qualification limits remain unchanged.
+
+### Accepted migration — v0.1.17 process exited 0; serving pending
+
+The three-file maintenance handoff passed parent **94** offline tests/diffcheck and
+independent read-only review with no blockers, then public PR **15** normally
+head-matched merged at **`1e0d3dffafd94198ec71fc9c5c5c7be029fdd4c5`**. Fresh
+lightweight **v0.1.17**, signing run **39636820692**, attempt 1, completed
+successfully. Parent accepted actual downloaded 2,269-byte deployment manifest and
+65-byte hash assets, metadata/hashes and supported `gh attestation verify` plus
+existing statement/manifest gates: exact source/tag/signer/invocation/config/CVM/
+firmware/cmdline/CPU2/memory8192/GPU0/**four disks**. Manifest SHA256
+**`6586516b24cf44959814a68d280777cbff2661fc4f7338f005b6aa70bfa4c767`**;
+config SHA256 **`47283360dbeaa29c77c2c4c4239ec391fb40e6fc15f5cfb83ad697a505fc3843`**.
+Original exact-source/native A/B/unexpired artifacts/exact archive and complete
+public package/private-source link/inventory/baseline/current-image tag plus actual
+registry digest were refreshed without another build or registry write.
+
+The bounded manual transition had an independent review correction: record two
+observed exit-zero snapshots before later native reconciliation so a read failure
+cannot erase known evidence. Fresh R2 found no remaining blocker. Parent offline
+fixtures passed five mutation-control scenarios, nine real snapshot validation
+cases and four post-completion read/identity/presentation failures; active LSP
+reported no errors. Caller-only passive preflight name selection was corrected to
+the signed predecessor's actual container declaration, not the volume name; those
+refusals sent no mutation and did not relax native/release guards. Corrected
+passive checks confirmed exact healthy predecessor, original attached same-host
+1 GiB disk and available/recent vendor status over ordinary verified TLS.
+
+Exactly **one Stop → authoritative Stopped → one v0.1.17 upgrade-only Deploy** was
+accepted. No Update/replan/repost, initialization, attach/allocation, key/secret
+binding/credential change, reset/restore or replay occurred. Same instance/disk/
+host/domain/shape, saved variables/SSH and selected managed secret-name list were
+unchanged, CC on/debug off. Only the measured phase's existing volume-key name was
+declared for the workload. No raw logs/metadata, identifiers/timestamps or secret
+values/lengths were retained in this record.
+
+Normal default-verified-TLS/nonredirecting passive vendor status returned two
+**available, recent, advancing snapshots** of the exact declared upgrade image and
+same created process **exited 0**, OOM false, restart count 0, restart policy `no`,
+empty Docker state-error text, and process start after this deploy. Final native
+current tag/boot/storage/host/domain/shape/config checks passed. This is supported
+process completion clearing the conditional serving gate, not fresh runtime
+attestation, direct database inspection or financial/durability acceptance. The
+upgrade allowance is consumed; never rerun it or use the old v1-only binary.
+
+Only root and this evidence record now change for separately signed ordinary
+serving; receipt, all templates/helpers/workflows and private source are unchanged.
+The **same accepted image** renders the exact existing `persistent-serve` template
+SHA256 `0b8e023d7daa78cc30e28dc2e050c5204495fe7d3c6c16e18db0039579c9b7e2`:
+non-initializing serve, passive healthcheck, no diagnostics opt-in or credential
+upsert, existing volume/admin secret names, unchanged shape/ownership/four disks.
+Require parent offline tests, independent review, normal integration, fresh
+immutable signed release and downloaded-byte/crypto/native/artifact/registry gates
+before one Stop → Stopped → existing-only serving activation. Any failed/unknown
+outcome stops without replay or rollback. The separate supported existing-customer
+duration-only update/readback remains pending; source deployment alone does not
+establish twelve hours for this installation or extend previously issued tokens.
 
 ## Persistent candidate — separate disk bootstrap, ledger init and serve releases
 
