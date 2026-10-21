@@ -1,14 +1,81 @@
 # Possums intake: synthetic deployment
 
-**Current root: accepted website-enabled existing-only serving.** Signed
-**v0.1.16** was activated once after signed v0.1.15 additive setup exited zero.
-Native running/healthy and credential-free HTTPS website/assets checks passed.
-This supersedes older root and unused-serving descriptions below for this packet
-only. Preserve the current disk/key; both setup and serving allowances are
-consumed. Financial/durability, fresh runtime-attestation and real-data acceptance
-remain unqualified.
+**Current root: separately approved existing-ledger upgrade candidate; not activated.**
+The new accepted image and exact `persistent-ledger-upgrade` rendering prepare one
+stopped-service v1-to-v2 schema migration, never disk/ledger initialization.
+Running service remains signed **v0.1.16**. One later separately signed ordinary
+serving activation requires actual migration-process exit zero. Preserve the same
+instance/disk/key and all operator test state; no retry/reset/restore or old-binary
+rollback against v2. This supersedes older root/unused-allowance descriptions only
+for this packet. Financial/durability, fresh runtime-attestation, gateway/client
+integration and real-data acceptance remain unqualified.
 
 This public repository holds measured Tinfoil configuration and release evidence for one synthetic-only ledger instance. The separately signed persistent-bootstrap v0.1.6 has replaced the old disposable instance and reached platform Running with the original disk attached. That platform status alone does not establish successful application initialization or durability. Ordinary serving v0.1.7 subsequently failed its healthcheck after image pull/start. The separately signed diagnostic serving v0.1.8 also failed health and reported the closed managed-key input validation code below. The operator then explicitly approved discarding the old synthetic disk and creating one blank replacement with a privately updated/saved key. That approved reset and one v0.1.10 bootstrap ran, but the process reports exit 1. The v0.1.11 existing-only diagnostic boot then failed with the closed mount-verification code below. The separately signed mount-ID-corrected v0.1.12 existing-only boot reached the ledger-open checkpoint but failed with `LEDGER_STARTUP_MISSING_STATE`; the preserved disk/key remain unchanged. After disclosure, the operator explicitly approved the distinct guarded ledger-only initialization below, without disk formatting, and one later existing-only serving boot only after observed init exit 0. That v0.1.13 init process now reports exited 0 in two available/recent/advancing native snapshots; the root prepares the separately signed ordinary existing-only serving phase, not another initialization. The application source remains private; the operator-authorized synthetic container package is public and its binary is reverse-engineerable. Public configuration and release measurements do not make private application code independently inspectable.
+
+## Renewable-hold upgrade — accepted image, maintenance not activated
+
+The operator approved the intake-only twelve-hour native customer-token default,
+conditional renewable holds, and explicit state-preserving schema v1-to-v2
+upgrade. Only operator manual tests consume this intake; the operator freshly
+confirmed those tests and other intake registry/release/deployment writers paused
+through rollout. Existing customer duration requires a separate supported native
+duration-only update to 43200 and readback; deploying a fresh default does not
+change old settings or tokens. Gateway/client delivery is separate and not ready.
+
+Private PR **4** normally merged to exact main
+**`9a8b6bac3b2407419a8637bb90b0db4f3528b3e2`**. Parent full-root race/elpscheck,
+vet, actual local CLI/restart/v1-upgrade preservation tests passed. Independent
+scoped reviews found no blockers, including bounded per-account cleanup validation
+and isolated evaluator step-limit fixture corrections; production budgets remain
+unchanged. Earlier intermittent test failures remain recorded privately without
+claiming their cause or a long soak. Exact-main source check **39633935659** and
+one original qualification **39635131016**, attempt 1, passed. Distinct native
+AMD64 builders **1000002085** and **1000002084** independently built fresh outputs.
+Original unexpired artifacts A **12361261231**, B **12361705473** and archive
+**12360418737** passed unchanged admission and actual archive/manifest/config
+binding. Actual-image restart, native operator/auth, empty logging/origins,
+telemetry-disabled and startup-diagnostic cases passed. Browser inside the image
+remains `not_run`; previous-release compatibility receipt remains `unknown` and
+is not substituted for the separately tested explicit upgrade contract.
+
+Accepted receipt: source **`9a8b6bac3b2407419a8637bb90b0db4f3528b3e2`**,
+image **`sha256:70c01cfb228fb9edfe5523d83d8d260689951061e84d15a1a018769eadb0484d`**,
+archive **`5fbe8b2638564b2daad7d58cf58a84c99aa969881e5739798f86f0ec9bdcbc1d`**.
+The original owner-publication adapter/shared guards were recovered unchanged
+from historical Git source except the reviewed pinned native policy-path
+relocation; identical required policy bytes remain enforced. Parent **71** offline
+regressions passed. An unrooted local SDK package became unavailable before its
+first test; retaining the same official signed-cache package through an ignored
+local Nix GC root restored that prerequisite, without changing policy/guards.
+One owner-authenticated digest-preserving **zero-retry** copy completed after
+fresh exact-main/native/artifact/package-source-link/full-inventory/baseline/
+unused-tag admission. Registry digest/package postchecks and joined owned
+auth/public workspace cleanup passed. No grants, credentials, TLS, source or
+CI metadata guards changed. Scoped environment/authfile and native host history
+remain separate persistence boundaries; cleanup is not secure erasure.
+
+Public fixed-profile PR **14** merged normally at
+`541c7ac175a4a267abf7ea9cd0f2806e38eefc1e`. Parent **94** offline tests and actual
+pinned v0.1.14 refusal/v0.1.16/v0.1.17 acceptance with negative controls cover all
+seven phases; independent source-only review found no blockers. Root now renders
+only the new exact upgrade template from the accepted receipt, preserving CPU2 /
+memory8192 / GPU0, CVM/UID/volume ownership, four disks, read-only root/tmpfs,
+restart `no`, existing `/state/ledger`, and **only** the existing managed volume-key
+secret name. No listener, healthcheck, diagnostics, initialization, credentials or
+funding work. All old phase templates/releases remain immutable.
+
+The operator authorized one **Stop → authoritative Stopped → upgrade-only Deploy**,
+then one separately signed existing-only serving activation **only after supported
+recent/advancing exact-process exit-zero evidence**. Native Running alone is not
+completion. Failure or unknown result stops without replay/reset/restore or
+old-binary rollback. Source/render/receipt review, immutable signing, downloaded
+asset/cryptographic source/invocation/config/CVM/four-disk acceptance, original
+artifact/registry refresh and immediate native identity/storage/shape checks
+remain gates; no downtime or migration has occurred. Downtime may exceed one–two
+minutes. No new resource, key/secret-binding change, real funds, payment work,
+inference, telemetry export, gateway deployment or client installation is allowed.
+Managed key custody/platform decryption, beta volume rollback limits, native
+retention and real-data/runtime/accounting qualification limits remain unchanged.
 
 ## Persistent candidate — separate disk bootstrap, ledger init and serve releases
 
