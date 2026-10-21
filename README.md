@@ -244,6 +244,28 @@ remain separate; no raw errors/payloads, runtime identifiers/timestamps or secre
 values are included. Later documentation-only commits do not change the immutable
 release source or qualify a future replacement.
 
+## Managed existing-disk ledger upgrade — source only
+
+The fixed `persistent-ledger-upgrade` profile is **source only, not measured,
+signed or deployed**. The accepted website-enabled **v0.1.16 remains current**;
+`accepted-image.json` and root `tinfoil-config.yml` are unchanged. The new template
+runs exactly `ledger-upgrade --state /state/ledger --tinfoil-volume ledger` with
+only the existing volume-key secret name, restart `no`, no listener, healthcheck,
+diagnostics, initialization or operator credential inputs. CPU2/memory8192/GPU0,
+CVM pin, UID65532, read-only root/tmpfs, existing mount and four-disk requirement
+are unchanged. Decoder and actual-image qualification remain gates.
+
+This is a **stopped-service-only migration**, never an automatic serving upgrade.
+Preserve the same disk/key and all existing state; pause manual consumers and
+require authoritative Stopped before the separately qualified/signed upgrade
+boot. Require supported recent/advancing exact-process **exit 0** before one
+separately admitted serving activation; Running alone is insufficient. Failure or
+unknown completion stops the rollout for passive reconciliation, with no retry,
+reset, init, restore or disk replacement. After schema v2 migration the old binary
+cannot open state: **no old-binary rollback**. Downtime may exceed the one–two-minute
+target. Existing source/attempt/signature/activation guards remain mandatory;
+this source packet performs no image acceptance, release rendering or activation.
+
 ## Historical disposable scope — v0.1.5 retired by bootstrap
 
 - CPU-only Tinfoil instance: **2 CPUs / 8192 MB**.
