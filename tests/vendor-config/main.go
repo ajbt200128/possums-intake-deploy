@@ -22,7 +22,7 @@ func qualify() (failure string) {
 	if len(os.Args) != 3 || (os.Args[1] != "accept" && os.Args[1] != "reject") {
 		return "VENDOR_DECODER_INPUT_INVALID"
 	}
-	for _, phase := range []string{"synthetic", "persistent-bootstrap", "persistent-ledger-init", "persistent-website-init", "persistent-serve", "persistent-diagnostic-serve"} {
+	for _, phase := range []string{"synthetic", "persistent-bootstrap", "persistent-ledger-init", "persistent-website-init", "persistent-ledger-upgrade", "persistent-serve", "persistent-diagnostic-serve"} {
 		raw, err := os.ReadFile(filepath.Join(os.Args[2], "templates", phase+"-config.yml.in"))
 		if err != nil || len(raw) > config.MaxConfigBytes {
 			return "VENDOR_DECODER_FIXTURE_UNAVAILABLE"

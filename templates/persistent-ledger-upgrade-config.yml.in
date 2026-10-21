@@ -1,0 +1,24 @@
+cvm-version: @CVM_PIN@
+cpus: 2
+memory: 8192
+gpus: 0
+volumes:
+  - name: ledger
+    owner: 65532
+shim:
+  upstream-port: 8090
+  paths: ['/*']
+containers:
+  - name: intake-persistent-ledger-upgrade
+    image: ghcr.io/ajbt200128/possums-intake-synthetic@@IMAGE_DIGEST@
+    command: ['ledger-upgrade', '--state', '/state/ledger', '--tinfoil-volume', 'ledger']
+    user: '65532:65532'
+    read_only: true
+    restart: 'no'
+    persistent_volumes: ['ledger:/state']
+    tmpfs:
+      /tmp: 'rw,nosuid,nodev,size=128m,mode=1777'
+    env:
+      - OTEL_SDK_DISABLED: 'true'
+    secrets:
+      - LEDGER_VOLUME_KEY_B64

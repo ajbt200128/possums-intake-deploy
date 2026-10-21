@@ -30,6 +30,7 @@ on:
           - persistent-bootstrap
           - persistent-ledger-init
           - persistent-website-init
+          - persistent-ledger-upgrade
           - persistent-serve
           - persistent-diagnostic-serve
 
