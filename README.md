@@ -492,3 +492,28 @@ No token or signing permission is needed. This retained historical adapter fixtu
 Grant the Tinfoil GitHub App access to this repository. Keep runtime, admin and private-registry credential values outside Git, configuration, command arguments and chat. The sole CI-token exception for the pinned official action is disclosed above. Use dedicated synthetic-only operator/accounting credentials and narrowly scoped private-image credentials through supported private setup channels. Do not reuse gateway credentials.
 
 Tinfoil-managed secrets are accessible to platform infrastructure during deployment. This disposable test does not qualify customer-controlled encrypted storage, verified gateway-to-ledger transport, production durability or financial restore.
+
+## Existing-disk ledger replacement — source-only candidate
+
+The fixed `persistent-ledger-replace` phase is source only, not activated.
+`tinfoil-config.yml`, `accepted-image.json` and all older templates remain
+unchanged. Existing rollout-closeout documentation is separate; this source
+extension supplies no new runtime-status or activation receipt. The operator
+explicitly approved **Replace existing database**, discarding current accounts,
+balances, holds, operator and site state on the **same disk/key**. This is a
+qualification-required one-shot synthetic scope, not secure erasure, general
+production reset or recovery. The exact command is
+`ledger-replace --state /state/ledger --tinfoil-volume ledger --operator --discard-existing-ledger`.
+Only existing volume-key and operator credential secret names are declared;
+there is no disk initialization, listener, healthcheck or diagnostic opt-in.
+
+Parent review, application/native matching-build and actual-image qualification,
+pinned vendor decoder, provenance, immutable signing and all existing admission
+gates remain required. Then require **Stop → authoritative Stopped → one admitted
+replacement Deploy** on the same disk/key. Require **two available, recent,
+advancing snapshots of the exact same replacement process exited 0** before a
+separately signed and admitted ordinary serving activation; Running alone is not
+completion. Unknown or failed outcomes **STOP**, with passive reconciliation and
+no replay, init or restore. This source packet renders/signs/activates nothing;
+managed-key custody, native retention and financial/runtime qualification limits
+remain unchanged.

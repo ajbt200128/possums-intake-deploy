@@ -33,6 +33,7 @@ PROFILES = {
     "disposable": ("synthetic-config.yml.in", TEMPLATE_HASH, 3),
     "persistent-bootstrap": ("persistent-bootstrap-config.yml.in", "1f8204c8b0be394ee75e0feb00f69168cede18eb5e6084e3483da0e14035df93", 4),
     "persistent-ledger-init": ("persistent-ledger-init-config.yml.in", "8acff60da11650f0ccea6cf0eea1739cf58b14fcf3af68b80c89037e25784d45", 4),
+    "persistent-ledger-replace": ("persistent-ledger-replace-config.yml.in", "f01bb8a5740d244c7b4689e2f56f125bcb51f3368b3cde2152d4b0d348a10db5", 4),
     "persistent-website-init": ("persistent-website-init-config.yml.in", "c1ec50de7f612e0691f5813dbeaacbf14ea04d43dc21fc229f0c7436e3b4d776", 4),
     "persistent-ledger-upgrade": ("persistent-ledger-upgrade-config.yml.in", "721c6b0549e5cd0e46bb682df233caa10a1ccc7f1cb05461d39c29d6278ff831", 4),
     "persistent-serve": ("persistent-serve-config.yml.in", "0b8e023d7daa78cc30e28dc2e050c5204495fe7d3c6c16e18db0039579c9b7e2", 4),
