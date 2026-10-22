@@ -1,19 +1,66 @@
 # Possums intake: synthetic deployment
 
-**Current root: ordinary existing-only serving candidate after observed upgrade exit zero.**
-Signed **v0.1.17** ran the one approved stopped-service v1-to-v2 migration; two
-recent, available, advancing snapshots of the same exact process report exited 0,
-with final native identity/storage checks passed. Root now renders the unchanged
-`persistent-serve` template with that same accepted image/receipt, not another
-upgrade or initialization. The separate serving release/activation is still
-pending. Preserve the same instance/disk/key and all operator test state; no
-retry/reset/restore or old-binary rollback against v2. This supersedes older root/
-unused-allowance descriptions only for this packet. Existing native customer-token
-duration is not yet updated/verified as twelve hours. Financial/durability, fresh
-runtime-attestation, gateway/client integration and real-data acceptance remain
-unqualified.
+**Current root: explicit same-disk merged-account database replacement candidate.**
+The existing `possums.dev` intake remains on **v0.1.18**; this handoff has not
+stopped or updated it. The operator explicitly selected **Replace existing
+database**: discard current accounts, balances, holds and operator/site state
+inside `/state/ledger`, preserving the existing encrypted disk/key. Root renders
+only the fixed `persistent-ledger-replace` template with the newly published
+merged-schema-v3 image. No disk formatting/allocation, migration/restore, payment
+activation, gateway change, inference or telemetry export. Immutable signing,
+independent downloaded-byte/crypto/source/phase acceptance and fresh stopped-target
+admission precede one replacement deployment. Require two available, recent,
+advancing exact-process exit-zero snapshots before separately signed ordinary
+serving. Running alone is not completion. Older rollout/root descriptions below
+are historical, not an unused initialization/reset allowance.
 
-This public repository holds measured Tinfoil configuration and release evidence for one synthetic-only ledger instance. The separately signed persistent-bootstrap v0.1.6 has replaced the old disposable instance and reached platform Running with the original disk attached. That platform status alone does not establish successful application initialization or durability. Ordinary serving v0.1.7 subsequently failed its healthcheck after image pull/start. The separately signed diagnostic serving v0.1.8 also failed health and reported the closed managed-key input validation code below. The operator then explicitly approved discarding the old synthetic disk and creating one blank replacement with a privately updated/saved key. That approved reset and one v0.1.10 bootstrap ran, but the process reports exit 1. The v0.1.11 existing-only diagnostic boot then failed with the closed mount-verification code below. The separately signed mount-ID-corrected v0.1.12 existing-only boot reached the ledger-open checkpoint but failed with `LEDGER_STARTUP_MISSING_STATE`; the preserved disk/key remain unchanged. After disclosure, the operator explicitly approved the distinct guarded ledger-only initialization below, without disk formatting, and one later existing-only serving boot only after observed init exit 0. That v0.1.13 init process now reports exited 0 in two available/recent/advancing native snapshots; the root prepares the separately signed ordinary existing-only serving phase, not another initialization. The application source remains private; the operator-authorized synthetic container package is public and its binary is reverse-engineerable. Public configuration and release measurements do not make private application code independently inspectable.
+## Merged-account replacement — published image handoff, activation pending
+
+Private PR8 normally merged at **`b96debdfeac917c21ef76103ffe783eb80671c33`**.
+Exact-main check **39816408475** and fresh independent native AMD64 A/B
+qualification **39817837988**, both attempt 1, passed. Parent downloaded the
+closed A/B identity files and required both manifest and archive agreement;
+actual-image/startup/privacy evidence remains bound to that qualification.
+Browser-inside-image stays `not_run`, prior-release compatibility stays `unknown`;
+this destructive fresh-state procedure is not a compatibility migration.
+
+Observed native-owner publication receipt:
+
+- Source: **`b96debdfeac917c21ef76103ffe783eb80671c33`**.
+- Image: **`sha256:0e84e836678a3edabe7e4ba6253310002eed6daa45da70b397121a886a34bcb7`**.
+- Archive: **`53724a5e29c2d72d88f1260ad04ac34afe41b67d38011b9377ab0837c1219495`**.
+
+The selected saved-native-owner publisher completed one digest-preserving,
+zero-retry copy and original registry/package/private-source-link postchecks,
+then joined owned auth/public cleanup. Earlier source-list admission refusals
+were `no_effect`, not registry-copy attempts. The reviewed correction requires
+explicit actual CI run/attempt pins and validates fresh authoritative API
+metadata, without list fallback, fabricated Actions authority or relaxed success/
+source/package guards. The new source was freshly requalified; older identical
+image/archive bytes were not relabeled as new-source build evidence. Native
+credential/keychain/history/cache and platform persistence remain separate
+boundaries; cleanup does not establish secure erasure or whole-host transience.
+
+Fixed CVM **0.14.14**, CPU2/memory8192/GPU0, UID65532, read-only root, restart
+`no`, existing `ledger:/state`, tmpfs128m and four measured disks remain selected.
+Root config SHA256: **`05f72d32a1d4dfb94c2c0f0097c201e77a697757561acff397c59a7207dc7525`**.
+Only existing volume-key/operator-email/operator-password secret names are
+selected for maintenance; values are never read into this handoff. No healthcheck,
+listener, diagnostic opt-in, initialization flag, Stripe or accounting-key binding.
+Serve remains a separate existing-only signed phase, with payments disabled.
+
+Supported passive metadata independently selected exactly one of two instances
+by `possums.dev`, intake repository, v0.1.18 and required shape/CC/debug settings.
+The verified domain registry's sole usage selects that same instance; its sole
+existing **1 GiB** disk is attached on the same host. No runtime IDs, key values,
+raw errors or private configuration are recorded here; the other instance is
+unselected. Repeat identity/storage/domain/source checks immediately before
+**Stop → authoritative Stopped → one replacement Deploy**. A failed/unknown
+outcome stops without replay; retain partial state and known discard effects.
+Publication/signing are not fresh runtime attestation, financial durability or
+real-data/gateway/payment acceptance.
+
+This public repository holds measured Tinfoil configuration and release evidence for one synthetic-only ledger instance. The separately signed persistent-bootstrap v0.1.6 has replaced the old disposable instance and reached platform Running with the original disk attached. That platform status alone does not establish successful application initialization or durability. Ordinary serving v0.1.7 subsequently failed its healthcheck after image pull/start. The separately signed diagnostic serving v0.1.8 also failed health and reported the closed managed-key input validation code below. The operator then explicitly approved discarding the old synthetic disk and creating one blank replacement with a privately updated/saved key. That approved reset and one v0.1.10 bootstrap ran, but the process reports exit 1. The v0.1.11 existing-only diagnostic boot then failed with the closed mount-verification code below. The separately signed mount-ID-corrected v0.1.12 existing-only boot reached the ledger-open checkpoint but failed with `LEDGER_STARTUP_MISSING_STATE`; the preserved disk/key remain unchanged. After disclosure, the operator explicitly approved the distinct guarded ledger-only initialization below, without disk formatting, and one later existing-only serving boot only after observed init exit 0. That historical v0.1.13 init process subsequently reported exited 0 in two available/recent/advancing native snapshots; the root at that checkpoint prepared the separately signed ordinary existing-only serving phase, not another initialization. The application source remains private; the operator-authorized synthetic container package is public and its binary is reverse-engineerable. Public configuration and release measurements do not make private application code independently inspectable.
 
 ## Renewable-hold upgrade — historical image/maintenance handoff
 
@@ -493,12 +540,14 @@ Grant the Tinfoil GitHub App access to this repository. Keep runtime, admin and 
 
 Tinfoil-managed secrets are accessible to platform infrastructure during deployment. This disposable test does not qualify customer-controlled encrypted storage, verified gateway-to-ledger transport, production durability or financial restore.
 
-## Existing-disk ledger replacement — source-only candidate
+## Existing-disk ledger replacement — fixed phase and admission limits
 
-The fixed `persistent-ledger-replace` phase is source only, not activated.
-`tinfoil-config.yml`, `accepted-image.json` and all older templates remain
-unchanged. Existing rollout-closeout documentation is separate; this source
-extension supplies no new runtime-status or activation receipt. The operator
+The fixed `persistent-ledger-replace` phase was introduced through public PR17
+at main `cf023505e0e8df289ec5053e41be06842771614d`. The current handoff above now
+renders it and updates `accepted-image.json` from the observed publication
+receipt; all older templates and releases remain unchanged. Existing unrelated
+rollout-closeout documentation remains separate. There is no new replacement
+runtime-status or activation receipt. The operator
 explicitly approved **Replace existing database**, discarding current accounts,
 balances, holds, operator and site state on the **same disk/key**. This is a
 qualification-required one-shot synthetic scope, not secure erasure, general
@@ -514,6 +563,6 @@ replacement Deploy** on the same disk/key. Require **two available, recent,
 advancing snapshots of the exact same replacement process exited 0** before a
 separately signed and admitted ordinary serving activation; Running alone is not
 completion. Unknown or failed outcomes **STOP**, with passive reconciliation and
-no replay, init or restore. This source packet renders/signs/activates nothing;
-managed-key custody, native retention and financial/runtime qualification limits
-remain unchanged.
+no replay, init or restore. This handoff renders only; signing and activation
+remain gated. Managed-key custody, native retention and financial/runtime
+qualification limits remain unchanged.
