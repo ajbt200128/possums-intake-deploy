@@ -1,20 +1,44 @@
 # Possums intake: synthetic deployment
 
-**Current root: explicit same-disk merged-account database replacement candidate.**
-The existing `possums.dev` intake remains on **v0.1.18**; this handoff has not
-stopped or updated it. The operator explicitly selected **Replace existing
-database**: discard current accounts, balances, holds and operator/site state
-inside `/state/ledger`, preserving the existing encrypted disk/key. Root renders
-only the fixed `persistent-ledger-replace` template with the newly published
-merged-schema-v3 image. No disk formatting/allocation, migration/restore, payment
-activation, gateway change, inference or telemetry export. Immutable signing,
-independent downloaded-byte/crypto/source/phase acceptance and fresh stopped-target
-admission precede one replacement deployment. Require two available, recent,
-advancing exact-process exit-zero snapshots before separately signed ordinary
-serving. Running alone is not completion. Older rollout/root descriptions below
-are historical, not an unused initialization/reset allowance.
+**Current root: separately authorized existing-only diagnostic candidate.**
+After all source/build/publication/signing and stopped-target gates passed, the
+existing `possums.dev` v0.1.18 intake was stopped and one approved same-disk
+replacement deployed. **The v0.1.19 process exited 1.** Two available, recent,
+advancing snapshots bind that same exact process, restart count 0 and no OOM.
+Native Running is not successful initialization or application readiness. The
+application cause and application-state discard/initialization outcomes remain
+**unknown**; no raw logs were retrieved. The selected existing 1 GiB disk remains
+attached on its host. No disk formatting/allocation, key/secret-value change,
+restore/reset, payment activation, gateway change, inference or telemetry export.
 
-## Merged-account replacement — published image handoff, activation pending
+After disclosure, the operator explicitly selected **Existing-only diagnostic
+boot**, authorizing one separately qualified/signed `persistent-diagnostic-serve`
+replacement on that same disk/key despite the missing initialization exit-zero
+prerequisite. **It is not read-only:** normal serving and supported SDK database
+maintenance may start if existing state is valid. It never requests initialization
+or creates/upserts/resets operator credentials. This does not certify the failed
+replacement or permit real-data/gateway/payment acceptance from Running/health.
+No new disk, reset/restore/rekey, replacement/init replay, inference or telemetry.
+The other instance and local sandbox remain unselected/untouched.
+
+The root now renders that existing hash-fixed diagnostic profile, not another
+`ledger-replace` command. Image/three-field receipt remain unchanged; no new
+application source or registry copy. CVM0.14.14/CPU2/memory8192/GPU0/four disks,
+UID65532/readonly/restartno/ledger:/state/tmpfs128 and CC-on/debug-off remain fixed.
+Only existing volume-key/accounting-key **names** are selected; operator-password/
+email and Stripe secrets are not selected. Exact
+`LEDGER_MANAGED_STARTUP_DIAGNOSTICS=true` opts in only after actual parsed named-
+volume/no-initialization serve scope. The existing fixed private replaceable
+record is capped at **512 bytes**, closed enums only; pre-bind failure hold is
+cancellable and at most **120 seconds**. Tinfoil may retain the resulting closed
+healthcheck detail; no raw logs, identifiers/amounts/key values or new metrics.
+Diagnostic config SHA256: **`321911be692999952aaa39abde9ef323d51400528a062e5e56765fca88f18415`**.
+Signing, independent downloaded-byte/crypto/source/phase acceptance and fresh
+original-target stopped-writer admission remain pending. One new diagnostic
+Stop→Stopped→Deploy is separately authorized, not replay of the failed operation.
+Older rollout/root descriptions below are historical, not recovery/reset rights.
+
+## Merged-account replacement — published and signed handoff, failed activation
 
 Private PR8 normally merged at **`b96debdfeac917c21ef76103ffe783eb80671c33`**.
 Exact-main check **39816408475** and fresh independent native AMD64 A/B
@@ -43,7 +67,7 @@ boundaries; cleanup does not establish secure erasure or whole-host transience.
 
 Fixed CVM **0.14.14**, CPU2/memory8192/GPU0, UID65532, read-only root, restart
 `no`, existing `ledger:/state`, tmpfs128m and four measured disks remain selected.
-Root config SHA256: **`05f72d32a1d4dfb94c2c0f0097c201e77a697757561acff397c59a7207dc7525`**.
+Signed replacement config SHA256: **`05f72d32a1d4dfb94c2c0f0097c201e77a697757561acff397c59a7207dc7525`**.
 Only existing volume-key/operator-email/operator-password secret names are
 selected for maintenance; values are never read into this handoff. No healthcheck,
 listener, diagnostic opt-in, initialization flag, Stripe or accounting-key binding.
@@ -54,11 +78,32 @@ by `possums.dev`, intake repository, v0.1.18 and required shape/CC/debug setting
 The verified domain registry's sole usage selects that same instance; its sole
 existing **1 GiB** disk is attached on the same host. No runtime IDs, key values,
 raw errors or private configuration are recorded here; the other instance is
-unselected. Repeat identity/storage/domain/source checks immediately before
-**Stop → authoritative Stopped → one replacement Deploy**. A failed/unknown
-outcome stops without replay; retain partial state and known discard effects.
-Publication/signing are not fresh runtime attestation, financial durability or
-real-data/gateway/payment acceptance.
+unselected. These checks were repeated against the privately held original
+binding immediately before **Stop → authoritative Stopped → one replacement
+Deploy**; no further mutation is admitted by this completed sequence. Failed/
+unknown outcome stops without replay; retain partial state and known effects.
+
+Public PR18 normally merged at **`4c2e4d02a5797468661a0009afe3b6c31a1c3163`**;
+protected **v0.1.19** signing **39821727010**, attempt 1, succeeded. Independent
+downloaded-byte/asset digest/hash-file, exact config/template/CVM/four-disk and
+supported GH crypto/source/tag/GitHub-hosted signer/exact-invocation acceptance
+passed. Manifest SHA256: **`3ee86f00b1e4fe8436ec443ba5594097ca58f9ce23b358ec4d986ee855013250`**.
+The existing CLI **0.19.10** was independently matched to official archive/checksum/
+binary-member bytes without installation. Reviewed application-level Stop/Deploy
+has no intentional retry/update-plan loop; default SDK HTTP redirects/server
+internals are not a wire-once guarantee. Native post-acceptance metadata/rendering
+can fail after accepted work, so failed return alone is not no-effect evidence.
+The scoped local transition helper passed 15 offline synthetic tests, independent
+corrected-source review and active LSP before activation. It requires a caller-
+held original binding and strict post-submission start/completion evidence.
+
+Observed closed failure: **`MAINTENANCE_EXIT_NONZERO` /
+`passive_exact_process_completion` / `exit_zero_required` / process exit 1**.
+Passive post-failure metadata still admits the domain/repository/shape/security,
+maintenance secret-name selection and same-host attached disk, but establishes no
+discard or initialization outcome. No managed ledger-key/operator-secret values were read. No native exceptions or
+logs are recorded here, and no raw logs were retrieved. Signing/publication remain distinct from fresh runtime
+attestation, financial durability or real-data/gateway/payment acceptance.
 
 This public repository holds measured Tinfoil configuration and release evidence for one synthetic-only ledger instance. The separately signed persistent-bootstrap v0.1.6 has replaced the old disposable instance and reached platform Running with the original disk attached. That platform status alone does not establish successful application initialization or durability. Ordinary serving v0.1.7 subsequently failed its healthcheck after image pull/start. The separately signed diagnostic serving v0.1.8 also failed health and reported the closed managed-key input validation code below. The operator then explicitly approved discarding the old synthetic disk and creating one blank replacement with a privately updated/saved key. That approved reset and one v0.1.10 bootstrap ran, but the process reports exit 1. The v0.1.11 existing-only diagnostic boot then failed with the closed mount-verification code below. The separately signed mount-ID-corrected v0.1.12 existing-only boot reached the ledger-open checkpoint but failed with `LEDGER_STARTUP_MISSING_STATE`; the preserved disk/key remain unchanged. After disclosure, the operator explicitly approved the distinct guarded ledger-only initialization below, without disk formatting, and one later existing-only serving boot only after observed init exit 0. That historical v0.1.13 init process subsequently reported exited 0 in two available/recent/advancing native snapshots; the root at that checkpoint prepared the separately signed ordinary existing-only serving phase, not another initialization. The application source remains private; the operator-authorized synthetic container package is public and its binary is reverse-engineerable. Public configuration and release measurements do not make private application code independently inspectable.
 
@@ -543,11 +588,11 @@ Tinfoil-managed secrets are accessible to platform infrastructure during deploym
 ## Existing-disk ledger replacement — fixed phase and admission limits
 
 The fixed `persistent-ledger-replace` phase was introduced through public PR17
-at main `cf023505e0e8df289ec5053e41be06842771614d`. The current handoff above now
-renders it and updates `accepted-image.json` from the observed publication
+at main `cf023505e0e8df289ec5053e41be06842771614d`. The preceding v0.1.19 handoff
+rendered it and updated `accepted-image.json` from the observed publication
 receipt; all older templates and releases remain unchanged. Existing unrelated
-rollout-closeout documentation remains separate. There is no new replacement
-runtime-status or activation receipt. The operator
+rollout-closeout documentation remains separate. The one failed activation is
+recorded above; it neither opens another allowance nor proves initialization. The operator
 explicitly approved **Replace existing database**, discarding current accounts,
 balances, holds, operator and site state on the **same disk/key**. This is a
 qualification-required one-shot synthetic scope, not secure erasure, general
@@ -563,6 +608,6 @@ replacement Deploy** on the same disk/key. Require **two available, recent,
 advancing snapshots of the exact same replacement process exited 0** before a
 separately signed and admitted ordinary serving activation; Running alone is not
 completion. Unknown or failed outcomes **STOP**, with passive reconciliation and
-no replay, init or restore. This handoff renders only; signing and activation
-remain gated. Managed-key custody, native retention and financial/runtime
+no replay, init or restore. The one signed activation failed as recorded above;
+further mutation is not admitted. Managed-key custody, native retention and financial/runtime
 qualification limits remain unchanged.
