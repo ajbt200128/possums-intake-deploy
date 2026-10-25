@@ -39,6 +39,8 @@ PROFILES = {
     "persistent-serve": ("persistent-serve-config.yml.in", "0b8e023d7daa78cc30e28dc2e050c5204495fe7d3c6c16e18db0039579c9b7e2", 4),
     "persistent-diagnostic-serve": ("persistent-diagnostic-serve-config.yml.in", "c7ca16bf8d9d9fff81d6e70ef030c7a529b64c7d273956bab8feb4f7adb7be6a", 4),
     "persistent-observed-serve": ("persistent-observed-serve-config.yml.in", "621d71a185b11f293f1b1a425172102448f57314a337ee2cceb24391ce500ce7", 4),
+    "persistent-live-payments-init": ("persistent-live-payments-init-config.yml.in", "52009f1d7376260b500761fc7bc2c53142cb360b0ccad11c665ceee5b7816af1", 4),
+    "persistent-live-stripe-serve": ("persistent-live-stripe-serve-config.yml.in", "7e71fd63db75a232ec8e8eb5d10b45b437bd66cbeec7c99ff65d15d33e37848e", 4),
 }
 FIRMWARE_HASH = "78c890175928167a1bc095d4bf3bb4ad81de80cd7e4e9e683477fc359119c1c4"
 SHA = r"[0-9a-f]{40}"
@@ -635,6 +637,10 @@ def main(args):
         notes = ("Synthetic-only configuration phase: " + live.phase + ". Operator-trusted private publication handoff; private source is not publicly inspectable. No deployment, real data, payments, live telemetry, runtime identity or durability qualification. Parent must verify this exact completed signed run and downloaded asset hashes before one separately admitted instance.\n")
         if live.phase == "persistent-observed-serve":
             notes = ("Configuration phase: persistent-observed-serve. Operator-trusted private publication handoff; private source is not publicly inspectable. Explicit opt-in configuration for approved aggregate metrics only, conditional on valid dedicated private ingestion credentials. No telemetry delivery is established; production interface-error metrics remain disabled. No deployment, real data, payments, runtime identity or durability qualification. Parent must verify this exact completed signed run and downloaded asset hashes before one separately admitted instance.\n")
+        elif live.phase == "persistent-live-payments-init":
+            notes = ("Configuration phase: persistent-live-payments-init. Operator-trusted private publication handoff; private source is not publicly inspectable. Existing-only volume unlock and absent-only live payment schema setup on the initialized ledger; no disk/ledger initialization, reset, credential change, listener or provider call. Preserve disk/key and existing state. No setup completion, deployment, provider acceptance, runtime identity or durability qualification is established. Require passive successful completion before a separately rendered, committed, signed and admitted live serving phase; never replay a failed or unknown setup. Parent must verify this exact completed signed run and downloaded asset hashes before one separately admitted instance.\n")
+        elif live.phase == "persistent-live-stripe-serve":
+            notes = ("Configuration phase: persistent-live-stripe-serve. Operator-trusted private publication handoff; private source is not publicly inspectable. Explicit opt-in configuration for operator-authorized real Stripe checkout with exclusive tax added to credit principal, conditional on qualified live secrets, existing live payment state and launch gates. Approved aggregate metrics configuration is unchanged; no telemetry delivery is established and production interface-error metrics remain disabled. No activation, charge, provider acceptance, runtime identity or durability qualification is established. Preserve disk/key and existing state; no initialization, reset or automatic replay. Parent must verify this exact completed signed run and downloaded asset hashes before one separately admitted instance.\n")
         write_new(live.output / "release-notes.md", notes.encode(), "manifest")
         def output_digest():
             with Path(live.env["GITHUB_OUTPUT"]).open("a") as stream:

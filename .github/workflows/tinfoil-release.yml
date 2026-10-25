@@ -35,6 +35,8 @@ on:
           - persistent-serve
           - persistent-diagnostic-serve
           - persistent-observed-serve
+          - persistent-live-payments-init
+          - persistent-live-stripe-serve
 
 permissions: {}
 concurrency:
