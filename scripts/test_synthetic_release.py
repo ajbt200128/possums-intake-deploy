@@ -342,6 +342,8 @@ containers:
                  "templates/persistent-website-init-config.yml.in",
                  "templates/persistent-ledger-upgrade-config.yml.in",
                  "templates/persistent-observed-serve-config.yml.in",
+                 "templates/persistent-live-payments-init-config.yml.in",
+                 "templates/persistent-live-stripe-serve-config.yml.in",
                  "scripts/synthetic-release.py", "scripts/test_synthetic_release.py", r.WORKFLOW)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -364,6 +366,11 @@ containers:
                     result = git(args, code)
                     return result.replace(b"100644", mode) if args[1] == "ls-tree" else result
                 self.refuses("source", lambda: r.committed_files(root, PUBLIC, bad_mode))
+            for phase in ("persistent-live-payments-init", "persistent-live-stripe-serve"):
+                name = "templates/" + r.PROFILES[phase][0]
+                (root / name).write_bytes(b"changed")
+                self.refuses("source", lambda: r.committed_files(root, PUBLIC, git))
+                (root / name).write_bytes(contents[name])
             (root / "accepted-image.json").write_bytes(b"changed")
             self.refuses("source", lambda: r.committed_files(root, PUBLIC, git))
             (root / "accepted-image.json").unlink()
@@ -1016,6 +1023,8 @@ containers:
                             "templates/persistent-website-init-config.yml.in": (ROOT / "templates/persistent-website-init-config.yml.in").read_bytes(),
                             "templates/persistent-ledger-upgrade-config.yml.in": (ROOT / "templates/persistent-ledger-upgrade-config.yml.in").read_bytes(),
                             "templates/persistent-observed-serve-config.yml.in": (ROOT / "templates/persistent-observed-serve-config.yml.in").read_bytes(),
+                            "templates/persistent-live-payments-init-config.yml.in": (ROOT / "templates/persistent-live-payments-init-config.yml.in").read_bytes(),
+                            "templates/persistent-live-stripe-serve-config.yml.in": (ROOT / "templates/persistent-live-stripe-serve-config.yml.in").read_bytes(),
                             "scripts/synthetic-release.py": SCRIPT.read_bytes(),
                             "scripts/test_synthetic_release.py": Path(__file__).read_bytes(),
                             r.WORKFLOW: (ROOT / r.WORKFLOW).read_bytes()}
@@ -1375,7 +1384,7 @@ class PersistentChecks(unittest.TestCase):
         return (ROOT / "templates" / r.PROFILES[phase][0]).read_bytes()
 
     def test_exact_profiles_and_one_shot_commands(self):
-        self.assertEqual(set(r.PROFILES), {"disposable", "persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve", "persistent-ledger-init", "persistent-ledger-replace", "persistent-website-init", "persistent-ledger-upgrade", "persistent-observed-serve"})
+        self.assertEqual(set(r.PROFILES), {"disposable", "persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve", "persistent-ledger-init", "persistent-ledger-replace", "persistent-website-init", "persistent-ledger-upgrade", "persistent-observed-serve", "persistent-live-payments-init", "persistent-live-stripe-serve"})
         for phase in ("persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve", "persistent-ledger-init", "persistent-ledger-replace", "persistent-website-init", "persistent-ledger-upgrade"):
             template = self.template_for(phase)
             config = r.render(template, receipt(), CVM, phase)
@@ -1801,7 +1810,11 @@ containers:
                       "          - persistent-website-init\n"
                       "          - persistent-ledger-upgrade\n"
                       "          - persistent-serve\n          - persistent-diagnostic-serve\n"
-                      "          - persistent-observed-serve\n", workflow)
+                      "          - persistent-observed-serve\n"
+                      "          - persistent-live-payments-init\n"
+                      "          - persistent-live-stripe-serve\n", workflow)
+        choices = workflow.split("        options:\n", 1)[1].split("\npermissions:", 1)[0]
+        self.assertEqual(choices, "".join("          - " + phase + "\n" for phase in r.PROFILES))
 
     def test_managed_diagnostic_env_mutations_stop_before_live_work(self):
         phase = "persistent-diagnostic-serve"
@@ -1899,7 +1912,9 @@ containers:
                     env["RELEASE_STORAGE_PHASE"] = payload["inputs"]["expected_storage_phase"] = expected
                     env["GITHUB_EVENT_PATH"] = str(root / "event.json")
                     (root / "event.json").write_text(json.dumps(payload))
-                    with patch.dict(os.environ, env, clear=True), patch.object(r, "committed_files") as committed:
+                    with patch.dict(os.environ, env, clear=True), patch.object(r, "committed_files") as committed, \
+                         patch.object(r, "command") as command, patch.object(r, "public_get") as get, \
+                         patch.object(r, "measure") as measure:
                         if actual == expected:
                             live = r.Live(root)
                             self.assertEqual(live.phase, actual)
@@ -1908,6 +1923,9 @@ containers:
                         else:
                             self.refuses("config", lambda: r.Live(root))
                             committed.assert_not_called()
+                        command.assert_not_called()
+                        get.assert_not_called()
+                        measure.assert_not_called()
 
     def test_unknown_render_phase_is_content_free_and_initiates_no_work(self):
         output = io.StringIO()
@@ -1937,7 +1955,8 @@ class ObservedServeChecks(unittest.TestCase):
             "persistent-serve": ("persistent-serve-config.yml.in", "0b8e023d7daa78cc30e28dc2e050c5204495fe7d3c6c16e18db0039579c9b7e2", 4),
             "persistent-diagnostic-serve": ("persistent-diagnostic-serve-config.yml.in", "c7ca16bf8d9d9fff81d6e70ef030c7a529b64c7d273956bab8feb4f7adb7be6a", 4),
         }
-        self.assertEqual({key: value for key, value in r.PROFILES.items() if key != self.phase}, historical)
+        newer = {self.phase, "persistent-live-payments-init", "persistent-live-stripe-serve"}
+        self.assertEqual({key: value for key, value in r.PROFILES.items() if key not in newer}, historical)
         for phase, (_, digest, _) in historical.items():
             template = self.template_for(phase)
             self.assertEqual(r.sha(template), digest)
@@ -2094,16 +2113,157 @@ class ObservedServeChecks(unittest.TestCase):
                     self.assertFalse(r.main(["manifest"])["runtime_verified"])
                 notes = (Path(directory) / "release-notes.md").read_bytes()
                 if phase == self.phase:
-                    self.assertIn(b"Explicit opt-in configuration for approved aggregate metrics only", notes)
-                    self.assertIn(b"conditional on valid dedicated private ingestion credentials", notes)
-                    self.assertIn(b"No telemetry delivery is established", notes)
-                    self.assertIn(b"production interface-error metrics remain disabled", notes)
-                    self.assertNotIn(b"No deployment, real data, payments, live telemetry", notes)
+                    expected = ("Configuration phase: persistent-observed-serve. Operator-trusted private publication handoff; private source is not publicly inspectable. Explicit opt-in configuration for approved aggregate metrics only, conditional on valid dedicated private ingestion credentials. No telemetry delivery is established; production interface-error metrics remain disabled. No deployment, real data, payments, runtime identity or durability qualification. Parent must verify this exact completed signed run and downloaded asset hashes before one separately admitted instance.\n")
+                    self.assertEqual(notes, expected.encode())
+                elif phase == "persistent-live-payments-init":
+                    expected = ("Configuration phase: persistent-live-payments-init. Operator-trusted private publication handoff; private source is not publicly inspectable. Existing-only volume unlock and absent-only live payment schema setup on the initialized ledger; no disk/ledger initialization, reset, credential change, listener or provider call. Preserve disk/key and existing state. No setup completion, deployment, provider acceptance, runtime identity or durability qualification is established. Require passive successful completion before a separately rendered, committed, signed and admitted live serving phase; never replay a failed or unknown setup. Parent must verify this exact completed signed run and downloaded asset hashes before one separately admitted instance.\n")
+                    self.assertEqual(notes, expected.encode())
+                elif phase == "persistent-live-stripe-serve":
+                    expected = ("Configuration phase: persistent-live-stripe-serve. Operator-trusted private publication handoff; private source is not publicly inspectable. Explicit opt-in configuration for operator-authorized real Stripe checkout with exclusive tax added to credit principal, conditional on qualified live secrets, existing live payment state and launch gates. Approved aggregate metrics configuration is unchanged; no telemetry delivery is established and production interface-error metrics remain disabled. No activation, charge, provider acceptance, runtime identity or durability qualification is established. Preserve disk/key and existing state; no initialization, reset or automatic replay. Parent must verify this exact completed signed run and downloaded asset hashes before one separately admitted instance.\n")
+                    self.assertEqual(notes, expected.encode())
                 else:
                     expected = ("Synthetic-only configuration phase: " + phase + ". Operator-trusted private publication handoff; private source is not publicly inspectable. No deployment, real data, payments, live telemetry, runtime identity or durability qualification. Parent must verify this exact completed signed run and downloaded asset hashes before one separately admitted instance.\n")
                     self.assertEqual(notes, expected.encode())
                 live.gate.assert_called_once_with()
                 live.manifest.assert_called_once_with()
+
+
+class LiveStripeChecks(unittest.TestCase):
+    setUp = Checks.setUp
+    refuses = Checks.refuses
+    template_for = PersistentChecks.template_for
+
+    def test_init_exact_existing_only_clone_and_closed_inputs(self):
+        phase = "persistent-live-payments-init"
+        template = self.template_for(phase)
+        for original in ("persistent-website-init", "persistent-ledger-upgrade"):
+            command = original.removeprefix("persistent-")
+            expected = (self.template_for(original)
+                        .replace(("intake-" + original).encode(), b"intake-persistent-live-payments-init")
+                        .replace(("['" + command + "',").encode(), b"['live-payments-init',"))
+            self.assertEqual(template, expected)
+        self.assertEqual(r.PROFILES[phase], ("persistent-live-payments-init-config.yml.in",
+                         "52009f1d7376260b500761fc7bc2c53142cb360b0ccad11c665ceee5b7816af1", 4))
+        self.assertEqual(r.sha(template), r.PROFILES[phase][1])
+        self.assertIn(b"command: ['live-payments-init', '--state', '/state/ledger', '--tinfoil-volume', 'ledger']\n", template)
+        self.assertEqual(template.split(b"    env:\n")[1].split(b"    secrets:\n")[0],
+                         b"      - OTEL_SDK_DISABLED: 'true'\n")
+        self.assertEqual(template.split(b"    secrets:\n")[1], b"      - LEDGER_VOLUME_KEY_B64\n")
+        for forbidden in (b"healthcheck:", b"--listen", b"--operator", b"--initialize-volume",
+                          b"--discard-existing-ledger", b"LEDGER_ADMIN_KEY", b"LEDGER_OPERATOR_",
+                          b"STRIPE_", b"INTAKE_METRICS_", b"STARTUP_DIAGNOSTICS"):
+            self.assertNotIn(forbidden, template)
+
+    def test_serve_exact_observed_clone_and_closed_live_inputs(self):
+        phase = "persistent-live-stripe-serve"
+        template = self.template_for(phase)
+        expected = (self.template_for("persistent-observed-serve")
+                    .replace(b"'--operator',", b"'--operator', '--stripe-live',")
+                    .replace(b"    secrets:\n", b"      - STRIPE_LIVE_TAX_CODE: 'txcd_10103000'\n"
+                             b"      - STRIPE_RETURN_ORIGIN: 'https://possums.dev'\n    secrets:\n")
+                    + b"      - STRIPE_LIVE_API_KEY\n      - STRIPE_LIVE_WEBHOOK_SECRET\n")
+        self.assertEqual(template, expected)
+        self.assertEqual(r.PROFILES[phase], ("persistent-live-stripe-serve-config.yml.in",
+                         "7e71fd63db75a232ec8e8eb5d10b45b437bd66cbeec7c99ff65d15d33e37848e", 4))
+        self.assertEqual(r.sha(template), r.PROFILES[phase][1])
+        self.assertIn(b"command: ['serve', '--state', '/state/ledger', '--tinfoil-volume', 'ledger', '--operator', '--stripe-live', '--listen', '0.0.0.0:8090']\n", template)
+        self.assertEqual(template.split(b"    env:\n")[1].split(b"    secrets:\n")[0],
+                         b"      - OTEL_SDK_DISABLED: 'false'\n"
+                         b"      - INTAKE_METRICS_ENDPOINT: 'https://api.honeycomb.io/v1/metrics'\n"
+                         b"      - INTAKE_METRICS_ENVIRONMENT: 'production'\n"
+                         b"      - INTAKE_METRICS_SLOT: 'intake-01'\n"
+                         b"      - STRIPE_LIVE_TAX_CODE: 'txcd_10103000'\n"
+                         b"      - STRIPE_RETURN_ORIGIN: 'https://possums.dev'\n")
+        self.assertEqual(template.split(b"    secrets:\n")[1],
+                         b"      - LEDGER_VOLUME_KEY_B64\n      - LEDGER_ADMIN_KEY\n"
+                         b"      - INTAKE_METRICS_HONEYCOMB_API_KEY\n"
+                         b"      - STRIPE_LIVE_API_KEY\n      - STRIPE_LIVE_WEBHOOK_SECRET\n")
+        for forbidden in (b"--initialize-volume", b"--discard-existing-ledger", b"LEDGER_OPERATOR_",
+                          b"STARTUP_DIAGNOSTICS", b"OTEL_TRACES", b"OTEL_LOGS"):
+            self.assertNotIn(forbidden, template)
+
+    def test_live_mutations_refused_before_source_or_external_boundaries(self):
+        for phase in ("persistent-live-payments-init", "persistent-live-stripe-serve"):
+            template = self.template_for(phase)
+            config = r.render(template, receipt(), CVM, phase)
+            self.assertEqual(config, template.replace(b"@CVM_PIN@", CVM.encode()).replace(
+                b"@IMAGE_DIGEST@", receipt()["imageDigest"].encode()))
+            r.config_gate(config, template, receipt(), phase)
+            mutations = [
+                (b"cpus: 2", b"cpus: 4"), (b"memory: 8192", b"memory: 4096"), (b"gpus: 0", b"gpus: 1"),
+                (b"owner: 65532", b"owner: 0"), (b"ledger:/state", b"other:/state"),
+                (b"  - name: ledger\n", b"  - name: ledger\n  - name: extra\n"),
+                (b"/state/ledger", b"/state"), (b"user: '65532:65532'", b"user: '0:0'"),
+                (b"read_only: true", b"read_only: false"), (b"restart: 'no'", b"restart: 'always'"),
+                (b"size=128m", b"size=256m"), (b"@CVM_PIN@", b"0.15.0"),
+                (b"@IMAGE_DIGEST@", b"sha256:" + b"e" * 64),
+                (b"    env:\n", b"    env:\n      - LEDGER_MANAGED_STARTUP_DIAGNOSTICS: 'true'\n"),
+                (b"    env:\n", b"    env:\n      - OTEL_TRACES_EXPORTER: 'otlp'\n"),
+                (b"    env:\n", b"    env:\n      - OTEL_LOGS_EXPORTER: 'otlp'\n"),
+                (b"    secrets:\n", b"    secrets:\n      - EXTRA_FIXTURE_SECRET\n"),
+            ]
+            env_lines = template.split(b"    env:\n")[1].split(b"    secrets:\n")[0].splitlines(keepends=True)
+            for line in env_lines:
+                name, value = line.split(b": ", 1)
+                mutations.extend(((line, b""), (line, line + line),
+                                  (line, name + b"_EXTRA: " + value),
+                                  (line, name + b": 'invalid_fixture_value'\n"),
+                                  (line, name + b": " + value.replace(b"'", b""))))
+            for line in template.split(b"    secrets:\n")[1].splitlines(keepends=True):
+                mutations.extend(((line, b""), (line, line + line),
+                                  (line, b"      - OTHER_FIXTURE_SECRET\n"),
+                                  (line, line.rstrip() + b": synthetic_key_in_yaml\n")))
+            if phase == "persistent-live-payments-init":
+                for command in (b"init", b"ledger-replace", b"website-init", b"ledger-upgrade", b"serve"):
+                    mutations.append((b"['live-payments-init',", b"['" + command + b"',"))
+                for flag in (b"--initialize-volume", b"--discard-existing-ledger", b"--operator", b"--stripe-live"):
+                    mutations.append((b"'ledger']", b"'ledger', '" + flag + b"']"))
+                mutations.extend((
+                    (b"'ledger']", b"'ledger', '--listen', '0.0.0.0:8090']"),
+                    (b"    env:\n", b"    healthcheck:\n      test: ['CMD', '/bin/intake', 'synthetic-healthcheck']\n    env:\n"),
+                    (b"    secrets:\n", b"    secrets:\n      - LEDGER_ADMIN_KEY\n"),
+                    (b"    secrets:\n", b"    secrets:\n      - LEDGER_OPERATOR_EMAIL\n      - LEDGER_OPERATOR_PASSWORD\n"),
+                    (b"    secrets:\n", b"    secrets:\n      - STRIPE_LIVE_API_KEY\n      - STRIPE_LIVE_WEBHOOK_SECRET\n"),
+                ))
+            else:
+                mutations.extend((
+                    (b", '--stripe-live'", b""), (b", '--operator'", b""),
+                    (b"'--stripe-live'", b"'--stripe-synthetic'"),
+                    (b"['serve',", b"['live-payments-init',"),
+                    (b"['serve',", b"['serve', '--initialize-volume',"),
+                    (b"['serve',", b"['serve', '--discard-existing-ledger',"),
+                    (b"synthetic-healthcheck", b"serve"),
+                    (b"start_period: '35s'", b"start_period: '120s'"),
+                ))
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "templates").mkdir()
+                (root / "accepted-image.json").write_text(json.dumps(receipt()))
+                env, payload = environment(), event()
+                env["RELEASE_STORAGE_PHASE"] = payload["inputs"]["expected_storage_phase"] = phase
+                env["GITHUB_EVENT_PATH"] = str(root / "event.json")
+                (root / "event.json").write_text(json.dumps(payload))
+                with patch.dict(os.environ, env, clear=True), patch.object(r, "committed_files") as committed, \
+                     patch.object(r, "command") as command, patch.object(r, "public_get") as get, \
+                     patch.object(r, "measure") as measure:
+                    for before, after in mutations:
+                        with self.subTest(phase=phase, mutation=after):
+                            self.assertIn(before, template)
+                            changed_template = template.replace(before, after)
+                            changed_config = changed_template.replace(b"@CVM_PIN@", CVM.encode()).replace(
+                                b"@IMAGE_DIGEST@", receipt()["imageDigest"].encode())
+                            self.refuses("config", lambda: r.render(changed_template, receipt(), CVM, phase))
+                            self.refuses("config", lambda: r.config_gate(changed_config, template, receipt(), phase))
+                            for supplied_template, supplied_config in ((template, changed_config),
+                                                                       (changed_template, config),
+                                                                       (changed_template, changed_config)):
+                                (root / "templates" / r.PROFILES[phase][0]).write_bytes(supplied_template)
+                                (root / "tinfoil-config.yml").write_bytes(supplied_config)
+                                self.refuses("config", lambda: r.Live(root))
+                    committed.assert_not_called()
+                    command.assert_not_called()
+                    get.assert_not_called()
+                    measure.assert_not_called()
 
 
 if __name__ == "__main__":
