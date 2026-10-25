@@ -16,7 +16,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import urllib.error
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -341,6 +341,7 @@ containers:
                  "templates/persistent-ledger-replace-config.yml.in",
                  "templates/persistent-website-init-config.yml.in",
                  "templates/persistent-ledger-upgrade-config.yml.in",
+                 "templates/persistent-observed-serve-config.yml.in",
                  "scripts/synthetic-release.py", "scripts/test_synthetic_release.py", r.WORKFLOW)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -1014,6 +1015,7 @@ containers:
                             "templates/persistent-ledger-replace-config.yml.in": (ROOT / "templates/persistent-ledger-replace-config.yml.in").read_bytes(),
                             "templates/persistent-website-init-config.yml.in": (ROOT / "templates/persistent-website-init-config.yml.in").read_bytes(),
                             "templates/persistent-ledger-upgrade-config.yml.in": (ROOT / "templates/persistent-ledger-upgrade-config.yml.in").read_bytes(),
+                            "templates/persistent-observed-serve-config.yml.in": (ROOT / "templates/persistent-observed-serve-config.yml.in").read_bytes(),
                             "scripts/synthetic-release.py": SCRIPT.read_bytes(),
                             "scripts/test_synthetic_release.py": Path(__file__).read_bytes(),
                             r.WORKFLOW: (ROOT / r.WORKFLOW).read_bytes()}
@@ -1373,7 +1375,7 @@ class PersistentChecks(unittest.TestCase):
         return (ROOT / "templates" / r.PROFILES[phase][0]).read_bytes()
 
     def test_exact_profiles_and_one_shot_commands(self):
-        self.assertEqual(set(r.PROFILES), {"disposable", "persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve", "persistent-ledger-init", "persistent-ledger-replace", "persistent-website-init", "persistent-ledger-upgrade"})
+        self.assertEqual(set(r.PROFILES), {"disposable", "persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve", "persistent-ledger-init", "persistent-ledger-replace", "persistent-website-init", "persistent-ledger-upgrade", "persistent-observed-serve"})
         for phase in ("persistent-bootstrap", "persistent-serve", "persistent-diagnostic-serve", "persistent-ledger-init", "persistent-ledger-replace", "persistent-website-init", "persistent-ledger-upgrade"):
             template = self.template_for(phase)
             config = r.render(template, receipt(), CVM, phase)
@@ -1798,7 +1800,8 @@ containers:
                       "          - persistent-ledger-replace\n"
                       "          - persistent-website-init\n"
                       "          - persistent-ledger-upgrade\n"
-                      "          - persistent-serve\n          - persistent-diagnostic-serve\n", workflow)
+                      "          - persistent-serve\n          - persistent-diagnostic-serve\n"
+                      "          - persistent-observed-serve\n", workflow)
 
     def test_managed_diagnostic_env_mutations_stop_before_live_work(self):
         phase = "persistent-diagnostic-serve"
@@ -1915,6 +1918,192 @@ containers:
         self.assertNotIn(SECRET, output.getvalue())
         read.assert_not_called()
         command.assert_not_called()
+
+
+class ObservedServeChecks(unittest.TestCase):
+    setUp = Checks.setUp
+    refuses = Checks.refuses
+    template_for = PersistentChecks.template_for
+    phase = "persistent-observed-serve"
+
+    def test_historical_profiles_and_off_defaults_are_frozen(self):
+        historical = {
+            "disposable": ("synthetic-config.yml.in", "3ed591c27450d56887aabdb74ae466154c0da12d75b973ac20fd8dadb46b78e5", 3),
+            "persistent-bootstrap": ("persistent-bootstrap-config.yml.in", "1f8204c8b0be394ee75e0feb00f69168cede18eb5e6084e3483da0e14035df93", 4),
+            "persistent-ledger-init": ("persistent-ledger-init-config.yml.in", "8acff60da11650f0ccea6cf0eea1739cf58b14fcf3af68b80c89037e25784d45", 4),
+            "persistent-ledger-replace": ("persistent-ledger-replace-config.yml.in", "f01bb8a5740d244c7b4689e2f56f125bcb51f3368b3cde2152d4b0d348a10db5", 4),
+            "persistent-website-init": ("persistent-website-init-config.yml.in", "c1ec50de7f612e0691f5813dbeaacbf14ea04d43dc21fc229f0c7436e3b4d776", 4),
+            "persistent-ledger-upgrade": ("persistent-ledger-upgrade-config.yml.in", "721c6b0549e5cd0e46bb682df233caa10a1ccc7f1cb05461d39c29d6278ff831", 4),
+            "persistent-serve": ("persistent-serve-config.yml.in", "0b8e023d7daa78cc30e28dc2e050c5204495fe7d3c6c16e18db0039579c9b7e2", 4),
+            "persistent-diagnostic-serve": ("persistent-diagnostic-serve-config.yml.in", "c7ca16bf8d9d9fff81d6e70ef030c7a529b64c7d273956bab8feb4f7adb7be6a", 4),
+        }
+        self.assertEqual({key: value for key, value in r.PROFILES.items() if key != self.phase}, historical)
+        for phase, (_, digest, _) in historical.items():
+            template = self.template_for(phase)
+            self.assertEqual(r.sha(template), digest)
+            self.assertIn(b"      - OTEL_SDK_DISABLED: 'true'\n", template)
+            self.assertNotIn(b"INTAKE_METRICS_", template)
+
+    def test_native_validator_phase_literal_covers_all_profiles(self):
+        # Source coverage only; actual pinned decoder acceptance is a separate gate.
+        source = (ROOT / "tests/vendor-config/main.go").read_text()
+        literal = source.split("for _, phase := range []string{", 1)[1].split("}", 1)[0]
+        phases = json.loads("[" + literal + "]")
+        self.assertEqual(phases, ["synthetic" if phase == "disposable" else phase
+                                  for phase in r.PROFILES])
+
+    def test_exact_clone_environment_secrets_render_and_four_disk_manifest(self):
+        template = self.template_for(self.phase)
+        expected_env = (b"      - OTEL_SDK_DISABLED: 'false'\n"
+                        b"      - INTAKE_METRICS_ENDPOINT: 'https://api.honeycomb.io/v1/metrics'\n"
+                        b"      - INTAKE_METRICS_ENVIRONMENT: 'production'\n"
+                        b"      - INTAKE_METRICS_SLOT: 'intake-01'\n")
+        expected = (self.template_for("persistent-serve")
+                    .replace(b"      - OTEL_SDK_DISABLED: 'true'\n", expected_env)
+                    + b"      - INTAKE_METRICS_HONEYCOMB_API_KEY\n")
+        self.assertEqual(template, expected)
+        self.assertEqual(template.split(b"    env:\n")[1].split(b"    secrets:\n")[0], expected_env)
+        self.assertEqual(template.split(b"    secrets:\n")[1],
+                         b"      - LEDGER_VOLUME_KEY_B64\n      - LEDGER_ADMIN_KEY\n      - INTAKE_METRICS_HONEYCOMB_API_KEY\n")
+        self.assertEqual(r.PROFILES[self.phase], ("persistent-observed-serve-config.yml.in",
+                         "621d71a185b11f293f1b1a425172102448f57314a337ee2cceb24391ce500ce7", 4))
+        self.assertEqual(r.sha(template), r.PROFILES[self.phase][1])
+        config = r.render(template, receipt(), CVM, self.phase)
+        self.assertEqual(config, expected.replace(b"@CVM_PIN@", CVM.encode()).replace(
+            b"@IMAGE_DIGEST@", receipt()["imageDigest"].encode()))
+        r.config_gate(config, template, receipt(), self.phase)
+        value = manifest(config)
+        value["vm_shape"]["disks"] = 4
+        self.assertEqual(r.manifest_gate(json.dumps(value), config, receipt(), self.phase), value)
+        for forbidden in (b"--stripe-live", b"--initialize-volume", b"LEDGER_OPERATOR_", b"STARTUP_DIAGNOSTICS"):
+            self.assertNotIn(forbidden, template)
+
+    def test_observed_mutations_refused_before_any_live_boundary(self):
+        template = self.template_for(self.phase)
+        config = r.render(template, receipt(), CVM, self.phase)
+        mutations = []
+        # Each closed environment entry: removal, name/value edits, duplicates,
+        # and YAML type changes are all rejected by exact-byte admission.
+        env_lines = template.split(b"    env:\n")[1].split(b"    secrets:\n")[0].splitlines(keepends=True)
+        for line in env_lines:
+            name, value = line.split(b": ", 1)
+            mutations.extend(((line, b""), (line, line + line),
+                              (line, name + b"_EXTRA: " + value),
+                              (line, name + b": 'invalid_fixture_value'\n"),
+                              (line, name + b": " + value.replace(b"'", b""))))
+        for line in (b"      - EXTRA_FIXTURE_ENV: 'true'\n",
+                     b"      - OTEL_TRACES_EXPORTER: 'otlp'\n",
+                     b"      - OTEL_EXPORTER_OTLP_ENDPOINT: 'https://invalid.invalid'\n",
+                     b"      - OTEL_EXPORTER_OTLP_HEADERS: 'synthetic=sentinel'\n",
+                     b"      - INTAKE_METRICS_HEADERS: 'synthetic=sentinel'\n",
+                     b"      - INTAKE_METRICS_DATASET: 'synthetic'\n",
+                     b"      - INTAKE_METRICS_HONEYCOMB_API_KEY: 'synthetic_key_in_yaml'\n",
+                     b"      - LEDGER_MANAGED_STARTUP_DIAGNOSTICS: 'true'\n"):
+            mutations.append((b"    env:\n", b"    env:\n" + line))
+        mutations.extend((
+            (b"OTEL_SDK_DISABLED: 'false'", b"OTEL_SDK_DISABLED: 'true'"),
+            (b"api.honeycomb.io/v1/metrics", b"api.eu1.honeycomb.io/v1/metrics"),
+            (b"'production'", b"'development'"), (b"'intake-01'", b"'intake-02'"),
+            (b"      - INTAKE_METRICS_HONEYCOMB_API_KEY\n", b""),
+            (b"      - INTAKE_METRICS_HONEYCOMB_API_KEY\n", b"      - GATEWAY_METRICS_KEY\n"),
+            (b"      - INTAKE_METRICS_HONEYCOMB_API_KEY\n", b"      - INTAKE_METRICS_HONEYCOMB_API_KEY: synthetic_key_in_yaml\n"),
+            (b"    secrets:\n", b"    secrets:\n      - EXTRA_FIXTURE_SECRET\n"),
+            (b"LEDGER_ADMIN_KEY", b"OTHER_ADMIN_KEY"), (b"LEDGER_VOLUME_KEY_B64", b"OTHER_VOLUME_KEY"),
+            (b"['serve',", b"['serve', '--stripe-live',"),
+            (b"['serve',", b"['serve', '--stripe-synthetic',"),
+            (b"['serve',", b"['serve', '--stripe-tax',"),
+            (b"['serve',", b"['serve', '--initialize-volume',"),
+            (b"['serve',", b"['serve', '--discard-existing-ledger',"),
+            (b"['serve',", b"['init',"), (b"['serve',", b"['ledger-replace',"),
+            (b"['serve',", b"['website-init',"), (b"['serve',", b"['ledger-upgrade',"),
+            (b"cpus: 2", b"cpus: 4"), (b"memory: 8192", b"memory: 4096"), (b"gpus: 0", b"gpus: 1"),
+            (b"  - name: ledger\n", b"  - name: ledger\n  - name: extra\n"),
+            (b"owner: 65532", b"owner: 0"), (b"ledger:/state", b"other:/state"),
+            (b"/state/ledger", b"/state"), (b"user: '65532:65532'", b"user: '0:0'"),
+            (b"read_only: true", b"read_only: false"), (b"restart: 'no'", b"restart: 'always'"),
+            (b"size=128m", b"size=256m"), (b"synthetic-healthcheck", b"serve"),
+            (b"start_period: '35s'", b"start_period: '120s'"), (b"@CVM_PIN@", b"0.15.0"),
+            (b"@IMAGE_DIGEST@", b"sha256:" + b"e" * 64),
+        ))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "templates").mkdir()
+            (root / "accepted-image.json").write_text(json.dumps(receipt()))
+            env, payload = environment(), event()
+            env["RELEASE_STORAGE_PHASE"] = payload["inputs"]["expected_storage_phase"] = self.phase
+            env["GITHUB_EVENT_PATH"] = str(root / "event.json")
+            (root / "event.json").write_text(json.dumps(payload))
+            with patch.dict(os.environ, env, clear=True), patch.object(r, "committed_files") as committed, \
+                 patch.object(r, "command") as command, patch.object(r, "public_get") as get, \
+                 patch.object(r, "measure") as measure:
+                for before, after in mutations:
+                    with self.subTest(mutation=after):
+                        self.assertIn(before, template)
+                        changed_template = template.replace(before, after)
+                        changed_config = changed_template.replace(b"@CVM_PIN@", CVM.encode()).replace(
+                            b"@IMAGE_DIGEST@", receipt()["imageDigest"].encode())
+                        self.refuses("config", lambda: r.render(changed_template, receipt(), CVM, self.phase))
+                        self.refuses("config", lambda: r.config_gate(changed_config, template, receipt(), self.phase))
+                        for supplied_template, supplied_config in ((template, changed_config),
+                                                                   (changed_template, config),
+                                                                   (changed_template, changed_config)):
+                            (root / "templates" / r.PROFILES[self.phase][0]).write_bytes(supplied_template)
+                            (root / "tinfoil-config.yml").write_bytes(supplied_config)
+                            self.refuses("config", lambda: r.Live(root))
+                committed.assert_not_called()
+                command.assert_not_called()
+                get.assert_not_called()
+                measure.assert_not_called()
+
+    def test_observed_profile_keeps_source_crypto_and_receipt_guards(self):
+        env, payload = environment(), event()
+        env["RELEASE_STORAGE_PHASE"] = payload["inputs"]["expected_storage_phase"] = self.phase
+        self.assertEqual(r.public_gate(env, payload, receipt(), PublicAPI()), (TAG, PUBLIC))
+        for field, bad in (("RELEASE_PUBLISH", "false"), ("SYNTHETIC_RELEASE_ENABLED", "false"),
+                           ("GITHUB_RUN_ATTEMPT", "2"), ("GITHUB_ACTOR", "other"),
+                           ("GITHUB_REF_TYPE", "branch"), ("GITHUB_SHA", "e" * 40)):
+            self.refuses("disabled" if field in ("RELEASE_PUBLISH", "SYNTHETIC_RELEASE_ENABLED") else "source",
+                         lambda: r.public_gate({**env, field: bad}, payload, receipt(), PublicAPI()))
+        for path in ("/git/ref/heads/main", "/git/ref/tags/" + TAG):
+            api = PublicAPI()
+            api.values[path][1]["object"]["sha"] = "e" * 40
+            self.refuses("source", lambda: r.public_gate(env, payload, receipt(), api))
+        self.refuses("receipt", lambda: r.public_gate(env, payload, {**receipt(), "publicSourceSHA": "e" * 40}, PublicAPI()))
+        config = r.render(self.template_for(self.phase), receipt(), CVM, self.phase)
+        value = manifest(config)
+        value["vm_shape"]["disks"] = 4
+        digest = r.sha(json.dumps(value).encode())
+        checked = verified_statement(value, digest)
+        r.statement_gate(checked, value, digest, env)
+        checked[0]["verificationResult"]["signature"]["certificate"]["sourceRepositoryDigest"] = "e" * 40
+        self.refuses("signature", lambda: r.statement_gate(checked, value, digest, env))
+        for cvm in ("0.15.0", "0.14.14@sha256:" + "e" * 64):
+            self.refuses("config", lambda: r.render(self.template_for(self.phase), receipt(), cvm, self.phase))
+
+    def test_manifest_notes_are_phase_specific_and_historical_bytes_unchanged(self):
+        for phase in r.PROFILES:
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory() as directory:
+                live = Mock()
+                live.phase, live.output = phase, Path(directory)
+                live.env = {"GITHUB_OUTPUT": str(Path(directory) / "github-output")}
+                raw = b"synthetic_manifest_fixture"
+                live.manifest.return_value = (raw, {})
+                with patch.object(r, "Live", return_value=live), \
+                     patch.object(r, "command", side_effect=AssertionError("offline")), \
+                     patch.object(r, "public_get", side_effect=AssertionError("offline")):
+                    self.assertFalse(r.main(["manifest"])["runtime_verified"])
+                notes = (Path(directory) / "release-notes.md").read_bytes()
+                if phase == self.phase:
+                    self.assertIn(b"Explicit opt-in configuration for approved aggregate metrics only", notes)
+                    self.assertIn(b"conditional on valid dedicated private ingestion credentials", notes)
+                    self.assertIn(b"No telemetry delivery is established", notes)
+                    self.assertIn(b"production interface-error metrics remain disabled", notes)
+                    self.assertNotIn(b"No deployment, real data, payments, live telemetry", notes)
+                else:
+                    expected = ("Synthetic-only configuration phase: " + phase + ". Operator-trusted private publication handoff; private source is not publicly inspectable. No deployment, real data, payments, live telemetry, runtime identity or durability qualification. Parent must verify this exact completed signed run and downloaded asset hashes before one separately admitted instance.\n")
+                    self.assertEqual(notes, expected.encode())
+                live.gate.assert_called_once_with()
+                live.manifest.assert_called_once_with()
 
 
 if __name__ == "__main__":
