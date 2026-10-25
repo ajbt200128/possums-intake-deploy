@@ -34,6 +34,7 @@ on:
           - persistent-ledger-upgrade
           - persistent-serve
           - persistent-diagnostic-serve
+          - persistent-observed-serve
 
 permissions: {}
 concurrency:
