@@ -10,7 +10,7 @@ shim:
   paths: ['/*']
 containers:
   - name: intake-persistent
-    image: ghcr.io/ajbt200128/possums-intake-synthetic@sha256:32b0584774e8f72721e19ca8530ccd953671070477882c961790185288b25795
+    image: ghcr.io/ajbt200128/possums-intake-synthetic@sha256:2a052e0f09e20c9ff03c5abeb092abbecb6a665dd071597a1f864352d77b4181
     command: ['serve', '--state', '/state/ledger', '--tinfoil-volume', 'ledger', '--operator', '--listen', '0.0.0.0:8090']
     user: '65532:65532'
     read_only: true
@@ -25,7 +25,11 @@ containers:
       retries: 1
       start_period: '35s'
     env:
-      - OTEL_SDK_DISABLED: 'true'
+      - OTEL_SDK_DISABLED: 'false'
+      - INTAKE_METRICS_ENDPOINT: 'https://api.honeycomb.io/v1/metrics'
+      - INTAKE_METRICS_ENVIRONMENT: 'production'
+      - INTAKE_METRICS_SLOT: 'intake-01'
     secrets:
       - LEDGER_VOLUME_KEY_B64
       - LEDGER_ADMIN_KEY
+      - INTAKE_METRICS_HONEYCOMB_API_KEY
