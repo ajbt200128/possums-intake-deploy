@@ -22,7 +22,7 @@ func qualify() (failure string) {
 	if len(os.Args) != 3 || (os.Args[1] != "accept" && os.Args[1] != "reject") {
 		return "VENDOR_DECODER_INPUT_INVALID"
 	}
-	for _, phase := range []string{"synthetic", "persistent-bootstrap", "persistent-ledger-init", "persistent-ledger-replace", "persistent-website-init", "persistent-ledger-upgrade", "persistent-serve", "persistent-diagnostic-serve", "persistent-observed-serve", "persistent-live-payments-init", "persistent-live-stripe-serve"} {
+	for _, phase := range []string{"synthetic", "persistent-bootstrap", "persistent-ledger-init", "persistent-ledger-replace", "persistent-website-init", "persistent-ledger-upgrade", "persistent-serve", "persistent-diagnostic-serve", "persistent-observed-serve", "persistent-live-payments-init", "persistent-live-stripe-serve", "persistent-live-stripe-egress-serve"} {
 		raw, err := os.ReadFile(filepath.Join(os.Args[2], "templates", phase+"-config.yml.in"))
 		if err != nil || len(raw) > config.MaxConfigBytes {
 			return "VENDOR_DECODER_FIXTURE_UNAVAILABLE"
@@ -76,6 +76,24 @@ func qualify() (failure string) {
 		var fields struct{ PersistentVolumes []string }
 		if json.Unmarshal(encoded, &fields) != nil || len(fields.PersistentVolumes) != 1 || fields.PersistentVolumes[0] != "ledger:/state" {
 			return "VENDOR_DECODER_BINDING_MISMATCH"
+		}
+		if phase == "persistent-live-stripe-egress-serve" {
+			encoded, err := json.Marshal(parsed)
+			var networkFields struct {
+				Networks map[string]*struct {
+					Egress string
+					Allow  []string
+				}
+				Containers []struct{ Networks []string }
+			}
+			if err != nil || json.Unmarshal(encoded, &networkFields) != nil {
+				return "VENDOR_DECODER_NETWORK_UNAVAILABLE"
+			}
+			network := networkFields.Networks["public-egress"]
+			if len(networkFields.Networks) != 1 || network == nil || network.Egress != "open" || len(network.Allow) != 0 ||
+				len(networkFields.Containers) != 1 || len(networkFields.Containers[0].Networks) != 1 || networkFields.Containers[0].Networks[0] != "public-egress" {
+				return "VENDOR_DECODER_NETWORK_MISMATCH"
+			}
 		}
 		for _, changed := range [][]byte{
 			bytes.Replace(raw, []byte("persistent_volumes:"), []byte("volumes:"), 1),

@@ -78,7 +78,7 @@ jobs:
       - name: Public source and typed absence admission
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/synthetic-release.py guard
+        run: python3 scripts/stripe-egress-release.py guard
       - name: Official Tinfoil measurement, attestation and publication
         # Same pinned action and ephemeral CI-token boundary as ../possums.
         # The action owns the sole release-create call. No wrapper publication.

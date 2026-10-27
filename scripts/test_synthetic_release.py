@@ -1119,7 +1119,7 @@ containers:
         self.assertIn("config-file: ${{ github.workspace }}/tinfoil-config.yml", text)
         self.assertIn("github-token: ${{ secrets.GITHUB_TOKEN }}", text)
         self.assertIn("mark-as-latest: 'false'", text)
-        self.assertLess(text.index("python3 scripts/synthetic-release.py guard"), text.index(official))
+        self.assertLess(text.index("python3 scripts/stripe-egress-release.py guard"), text.index(official))
         self.assertNotIn("if:", text[text.index("      - name: Official Tinfoil"):])
         for line in text.splitlines():
             if "uses:" in line:
@@ -1969,7 +1969,7 @@ class ObservedServeChecks(unittest.TestCase):
         literal = source.split("for _, phase := range []string{", 1)[1].split("}", 1)[0]
         phases = json.loads("[" + literal + "]")
         self.assertEqual(phases, ["synthetic" if phase == "disposable" else phase
-                                  for phase in r.PROFILES])
+                                  for phase in r.PROFILES] + ["persistent-live-stripe-egress-serve"])
 
     def test_exact_clone_environment_secrets_render_and_four_disk_manifest(self):
         template = self.template_for(self.phase)
