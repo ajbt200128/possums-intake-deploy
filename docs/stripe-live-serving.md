@@ -188,3 +188,87 @@ identifiers, amounts, raw exceptions or telemetry retries/spool. No telemetry
 delivery is established. Platform-managed disk-key custody, operator access,
 provider retention and native host history remain separate boundaries; no
 whole-process transience, runtime identity or durability claim follows.
+
+## Published response-budget correction — signing/activation still pending
+
+This latest **accepted-image/root configuration-source packet** supersedes the
+older root-untouched/source-only statements above for this published packet
+only; those statements remain historical. This packet makes local file changes
+only, not a runtime change or exercise of commit/publication/activation authority.
+
+Accepted private main is `b8d9ce20661b70170f451be3978ecd44e51df5da` (normal
+PR14 merge). Source CI **40451722504**, attempt 1, passed all ten steps; fresh
+native qualification **40452535012**, attempt 1, passed source/A/B/compare with
+distinct builders. Parent independently verified actual A/B report ZIPs, file
+hashes/inventories and the supported build gate's mandatory native, synthetic and
+startup cases. These are fresh builds of this source, not reuse of an older
+candidate's evidence merely because the reproduced image digest is identical.
+Browser inside the image remains **`not_run`**; previous-release compatibility
+remains **`unknown`**.
+
+The published image is
+`sha256:c815d18028e35970ef16d1a9b41287360d87bd04bf1c792efc806588e305f7f0`;
+archive SHA-256 is
+`605466bc4c610c346ed4c30aca662d8cfabfd50db0fd948a3b2b6290bf0b3a37`.
+Read-only CI **40453053512** passed five validation steps with publication
+skipped, zero publication steps and zero artifacts. Actual protected publication
+**40453310204**, attempt 1, passed five validation and eleven publication steps,
+including actual archive/full-image/raw-registry-digest checks, owned auth
+cleanup and receipt publication. Parent independently verified the public
+package and its complete twelve-version, one-page inventory: baseline retained
+and exactly one current-source-tag version matched this image. The operator
+waived the **entire package-to-source association check**, including repository
+ID/name/private projection; no package repository link was inspected, verified
+or required. Private source identity/current-main, native build, signature,
+image/archive digest and disk/activation guards remain mandatory. No permission
+or visibility-setting change is part of this packet.
+
+`accepted-image.json` copies the actual parent-verified canonical three-field
+receipt (`archiveSHA`, `imageDigest`, `publicSourceSHA`) byte for byte, with no
+extra fields. File SHA-256:
+`e5bb1996194c17cc0a4667a024efc07649e4ad05ac66670129ddc402f1fea08e`.
+The parent verified the actual receipt ZIP and extracted file; the full image
+archive was **not downloaded/rehashed locally**. Protected CI's actual archive
+gate passed; that is not a claim of a local full-archive hash.
+
+Root is freshly rendered from the unchanged
+`persistent-live-stripe-serve-config.yml.in` template hash
+`7e71fd63db75a232ec8e8eb5d10b45b437bd66cbeec7c99ff65d15d33e37848e`,
+substituting only CVM **0.14.14** and the accepted image digest. New root SHA-256:
+`8380f9282262d07ae33dbcf63d56e9b25aa6dc22ce1711df0821534d56dd6f7c`.
+Against the preceding root, only its image-digest line changes. All templates,
+helper/source/tests/workflows/controllers and preexisting README/cache bytes
+remain unchanged. Existing approved four metric families/configuration and
+secret-name references remain unchanged; no telemetry expansion or export is
+performed by this packet.
+
+The application correction gives Go's actual serving HTTP server a finite
+**30-second `WriteTimeout`**, with response headroom beyond the existing provider
+windows, and preserves the four known live-context/live-URL/tax/tax-completion
+constraints through the website's closed diagnostic projection. This does not
+add blanket interception of uncaught SDK timeouts or guarantee response delivery.
+Existing SDK timeout behavior, provider timeouts and zero-retry behavior,
+accounting, authentication and privacy rules are unchanged. The original HTTP
+502's cause and provider-creation outcome remain **unknown**, not proven timeout
+or no-effect evidence.
+
+Before any activation, require parent independent review, exact-current-main
+public source, a fresh immutable protected signed release, actual downloaded-byte
+and supported cryptographic acceptance, and **one NEW separately reviewed,
+exclusive one-use existing-only replacement controller**. Preserve the v25
+baseline/state/site and the consumed v24/v25 activation receipts; neither old
+receipt authorizes replay. Re-admit the same **8,000,000,000-byte existing disk**,
+key, instance/host/domain, CPU2/memory8192/GPU0, CC true/debug false and current
+secret names. No new resources, resize, reset, initialization, restore, credential
+or account mutation, gateway work or automatic mutation retry is authorized here.
+Ordinary serve may perform supported database/maintenance writes: it is **not
+read-only**. Platform-managed key custody/decryption, beta volume rollback
+limits, native/platform retention and unknown financial preservation remain
+explicit boundaries; no safe financial restore or preservation receipt follows.
+
+The original unpaid USD 5 initiation is unknown and **must remain unreplayed**.
+Only after a qualified replacement may the parent conduct the separately
+authorized **one distinct unpaid USD 5 initiation**; no card entry, Pay submission
+or payment. No browser, hosted Checkout, funding or fresh runtime-attestation
+acceptance is established by this packet. Runtime attestation remains unverified;
+the operator accepted the current platform-plus-WebPKI trust boundary only.
