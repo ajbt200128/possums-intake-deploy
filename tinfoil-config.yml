@@ -14,7 +14,7 @@ shim:
 containers:
   - name: intake-persistent
     networks: [public-egress]
-    image: ghcr.io/ajbt200128/possums-intake-synthetic@sha256:c815d18028e35970ef16d1a9b41287360d87bd04bf1c792efc806588e305f7f0
+    image: ghcr.io/ajbt200128/possums-intake-synthetic@sha256:8dd012aebfcdf52dcd3d93bc6b961dc99e737d97b7bdde24d1f37fd6bc560b94
     command: ['serve', '--state', '/state/ledger', '--tinfoil-volume', 'ledger', '--operator', '--stripe-live', '--listen', '0.0.0.0:8090']
     user: '65532:65532'
     read_only: true
